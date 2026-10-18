@@ -5,6 +5,200 @@ const ITEMS_KEY = 'spatialcache_items_v1';
 const ROOMS_KEY = 'spatialcache_rooms_v1';
 const ENGAGEMENT_KEY = 'findit_engagement_v2';
 
+// -------------------------------------------------------------------------
+// FIREBASE CONFIGURATION & AUTOMATIC REAL-TIME SYNC
+// -------------------------------------------------------------------------
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBBlE03MOMORuw3MaTsVLE5N3qZrMkMOLw",
+  authDomain: "whereabouts53.firebaseapp.com",
+  projectId: "whereabouts53",
+  storageBucket: "whereabouts53.firebasestorage.app",
+  messagingSenderId: "877953208687",
+  appId: "1:877953208687:web:ad90c8e8c7125c258ed89a"
+};
+
+if (typeof firebase !== 'undefined') {
+  try {
+    firebase.initializeApp(firebaseConfig);
+  } catch (e) {
+    console.warn('Firebase init notice:', e);
+  }
+}
+
+const auth = typeof firebase !== 'undefined' ? firebase.auth() : null;
+const db = typeof firebase !== 'undefined' ? firebase.firestore() : null;
+
+let currentUser = null;
+let isSignUpMode = false;
+let firestoreUnsubscribe = null;
+
+// Automatic Real-Time Auth Listener
+if (auth) {
+  auth.onAuthStateChanged((user) => {
+    currentUser = user;
+    updateAuthUI();
+
+    if (user) {
+      attachRealtimeSync(user.uid);
+    } else {
+      if (firestoreUnsubscribe) {
+        firestoreUnsubscribe();
+        firestoreUnsubscribe = null;
+      }
+    }
+  });
+}
+
+// Live Two-Way Cloud Synchronization (Automatic across all logged-in devices)
+function attachRealtimeSync(uid) {
+  if (!db) return;
+  if (firestoreUnsubscribe) firestoreUnsubscribe();
+
+  firestoreUnsubscribe = db.collection('users').doc(uid).onSnapshot((doc) => {
+    if (doc.exists) {
+      const data = doc.data();
+      if (data.items && Array.isArray(data.items)) {
+        state.items = data.items;
+        saveItems(false); // Update local cache without triggering duplicate upload loop
+      }
+      if (data.rooms && Array.isArray(data.rooms)) {
+        state.rooms = data.rooms;
+        saveRooms();
+      }
+      renderApp();
+    } else {
+      // First time user registers: push local inventory up to cloud
+      pushToCloud();
+    }
+  }, (err) => {
+    console.warn('Realtime sync notice:', err);
+  });
+}
+
+// Push local changes to cloud automatically
+async function pushToCloud() {
+  if (!currentUser || !db) return;
+  try {
+    await db.collection('users').doc(currentUser.uid).set({
+      items: state.items,
+      rooms: state.rooms,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch (err) {
+    console.warn('Cloud sync error:', err);
+  }
+}
+
+window.openAuthModal = function () {
+  const modal = document.getElementById('auth-modal');
+  if (modal) {
+    updateAuthUI();
+    modal.classList.remove('hidden');
+    safeCreateIcons();
+  }
+};
+
+window.closeAuthModal = function () {
+  const modal = document.getElementById('auth-modal');
+  if (modal) modal.classList.add('hidden');
+};
+
+function updateAuthUI() {
+  const loggedInView = document.getElementById('auth-logged-in-view');
+  const form = document.getElementById('auth-form');
+  const userEmail = document.getElementById('auth-user-email');
+  const headerLabel = document.getElementById('header-auth-label');
+
+  if (currentUser) {
+    if (loggedInView) loggedInView.classList.remove('hidden');
+    if (form) form.classList.add('hidden');
+    if (userEmail) userEmail.textContent = currentUser.email;
+    if (headerLabel) headerLabel.textContent = 'Account';
+  } else {
+    if (loggedInView) loggedInView.classList.add('hidden');
+    if (form) form.classList.remove('hidden');
+    if (headerLabel) headerLabel.textContent = 'Log In';
+  }
+}
+
+window.toggleAuthMode = function () {
+  isSignUpMode = !isSignUpMode;
+  const title = document.getElementById('auth-modal-title');
+  const submitBtn = document.getElementById('auth-submit-btn');
+  const toggleMsg = document.getElementById('auth-toggle-msg');
+  const toggleBtn = document.getElementById('auth-toggle-btn');
+
+  if (isSignUpMode) {
+    if (title) title.textContent = 'Create Account';
+    if (submitBtn) submitBtn.textContent = 'Sign Up';
+    if (toggleMsg) toggleMsg.textContent = 'Already have an account?';
+    if (toggleBtn) toggleBtn.textContent = 'Sign In';
+  } else {
+    if (title) title.textContent = 'Cloud Account';
+    if (submitBtn) submitBtn.textContent = 'Sign In';
+    if (toggleMsg) toggleMsg.textContent = 'Need an account?';
+    if (toggleBtn) toggleBtn.textContent = 'Sign Up';
+  }
+};
+
+window.handleAuthSubmit = async function (e) {
+  e.preventDefault();
+  if (!auth) {
+    showToast('Firebase not initialized. Check internet connection.');
+    return;
+  }
+  const emailInput = document.getElementById('auth-email');
+  const passInput = document.getElementById('auth-password');
+  const email = emailInput ? emailInput.value.trim() : '';
+  const password = passInput ? passInput.value : '';
+
+  try {
+    if (isSignUpMode) {
+      await auth.createUserWithEmailAndPassword(email, password);
+      showToast('Account created & synced!');
+    } else {
+      await auth.signInWithEmailAndPassword(email, password);
+      showToast('Signed in & synced!');
+    }
+    closeAuthModal();
+  } catch (err) {
+    showToast(err.message || 'Authentication error');
+  }
+};
+
+window.handleSignOut = async function () {
+  if (!auth) return;
+  await auth.signOut();
+  closeAuthModal();
+  showToast('Signed out. Working in local mode.');
+};
+
+window.handleDeleteAccount = function () {
+  showConfirmDialog({
+    title: 'Delete Account Permanently',
+    message: 'Permanently erase your account and all cloud inventory? This cannot be undone.',
+    confirmText: 'Delete Everything',
+    confirmClass: 'bg-red-600 hover:bg-red-700 text-white',
+    onConfirm: async () => {
+      try {
+        if (currentUser && db) {
+          await db.collection('users').doc(currentUser.uid).delete();
+          await currentUser.delete();
+          showToast('Account and cloud inventory deleted.');
+          closeAuthModal();
+        }
+      } catch (err) {
+        showToast(err.message || 'Error deleting account');
+      }
+    },
+  });
+};
+
+// -------------------------------------------------------------------------
+// INITIAL DATA & CATEGORY THEMES
+// -------------------------------------------------------------------------
+
 const INITIAL_ROOMS = [
   {
     id: 'kitchen-pantry',
@@ -344,6 +538,7 @@ const CATEGORY_THEMES = {
   },
 };
 
+// App State
 const state = {
   items: [],
   rooms: [],
@@ -372,6 +567,10 @@ const state = {
   spotCheckCurrentIndex: 0,
   deferredInstallPrompt: null,
 };
+
+// -------------------------------------------------------------------------
+// STORAGE & UTILITY HELPERS
+// -------------------------------------------------------------------------
 
 function loadData() {
   try {
@@ -409,9 +608,12 @@ function loadData() {
   }
 }
 
-function saveItems() {
+function saveItems(shouldSync = true) {
   try {
     localStorage.setItem(ITEMS_KEY, JSON.stringify(state.items));
+    if (shouldSync) {
+      pushToCloud();
+    }
   } catch (e) {
     console.error('Error saving items:', e);
   }
@@ -420,6 +622,7 @@ function saveItems() {
 function saveRooms() {
   try {
     localStorage.setItem(ROOMS_KEY, JSON.stringify(state.rooms));
+    pushToCloud();
   } catch (e) {
     console.error('Error saving rooms:', e);
   }
@@ -604,6 +807,10 @@ function getVerificationConfidence(item) {
     };
   }
 }
+
+// -------------------------------------------------------------------------
+// FORGIVING SEARCH ENGINE
+// -------------------------------------------------------------------------
 
 const INDIAN_SYNONYMS = {
   'chashma': ['glasses', 'spectacles', 'reading glasses', 'eyewear'],
@@ -923,6 +1130,10 @@ function getFilteredItems() {
 
   return results;
 }
+
+// -------------------------------------------------------------------------
+// APP RENDERING
+// -------------------------------------------------------------------------
 
 function renderApp() {
   renderSortFilterCard();
@@ -1280,6 +1491,10 @@ window.clearSearchInput = function () {
   renderApp();
 };
 
+// -------------------------------------------------------------------------
+// SELF-HEALING ("NOT THERE") WORKFLOW
+// -------------------------------------------------------------------------
+
 let currentNotThereItemId = null;
 let currentRelocateItemId = null;
 
@@ -1436,6 +1651,10 @@ window.confirmRelocateItem = function () {
   renderApp();
   showToast(`Location updated! ${item.name} moved to ${newRoom} › ${newSpot}`, 'success');
 };
+
+// -------------------------------------------------------------------------
+// PAGE NAVIGATION & VIEWS
+// -------------------------------------------------------------------------
 
 window.switchPage = function (pageId) {
   state.activePage = pageId;
@@ -1729,7 +1948,6 @@ function renderGridView(container) {
         <span class="text-sm font-bold text-stone-800">Clear Storage Bins & Labels</span>
         <span class="text-xs text-stone-500 max-w-xs">Organize shelves and drawers with durable stackable containers</span>
       </div>
-      <!-- Ad code placeholder: In-Feed unit will be mounted here -->
     </div>
   `;
 
@@ -2117,6 +2335,10 @@ window.returnLentItem = function (id) {
   showToast(`"${item.name}" returned home to ${item.location.room}`);
 };
 
+// -------------------------------------------------------------------------
+// IN-APP DIALOGS
+// -------------------------------------------------------------------------
+
 function showConfirmDialog({ title, message, confirmText = 'Confirm', confirmClass = 'bg-rose-600 hover:bg-rose-700 text-white', onConfirm }) {
   const modal = document.getElementById('app-dialog-modal');
   if (!modal) {
@@ -2268,6 +2490,10 @@ window.deleteItem = function (id) {
     },
   });
 };
+
+// -------------------------------------------------------------------------
+// ADD / CAPTURE WORKFLOW (2-FIELD LOCATION: ROOM & SPOT)
+// -------------------------------------------------------------------------
 
 window.openQuickAddModal = function () {
   state.editingItemId = null;
@@ -2442,7 +2668,7 @@ function parseSentence(raw) {
   let text = raw.trim();
 
   text = text.replace(/^(?:i\s+(?:just\s+)?(?:put|placed|stored|kept|left|moved)\s+(?:the|my|a|an)?\s*)/i, '');
-  text = text.replace(/^(?:put|place|store|keep|leave)\s+(?:the|my|a|an)?\s*/i, '');
+  text = text.replace(/^(?:put|place|store|keep|leave)\s+(?:the|my|a|an)?\s*)/i, '');
 
   const roomKeywords = [
     { match: /master\s+bedroom|bedroom/i, name: 'Master Bedroom' },
@@ -3206,6 +3432,10 @@ window.discardAllAddEntries = function () {
   discardDetailedFormEntry();
 };
 
+// -------------------------------------------------------------------------
+// SPOT CHECK (15-SECOND MEMORY FLASHCARD)
+// -------------------------------------------------------------------------
+
 function initSpotCheckPage() {
   const itemsSortedByAge = [...state.items].sort(
     (a, b) => new Date(a.lastVerifiedAt || 0).getTime() - new Date(b.lastVerifiedAt || 0).getTime()
@@ -3354,6 +3584,10 @@ window.scrollToTopView = function () {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
+// -------------------------------------------------------------------------
+// PWA INSTALLATION & SERVICE WORKER
+// -------------------------------------------------------------------------
+
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   state.deferredInstallPrompt = e;
@@ -3385,6 +3619,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// App Initialization
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
 
