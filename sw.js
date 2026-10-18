@@ -1,14 +1,17 @@
-const CACHE_NAME = 'whereabouts-pwa-v1';
+const CACHE_NAME = 'whereabouts-pwa-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './app.js',
   './style.css',
   './manifest.json',
-  './icon.svg',
-  './pwa-192x192.png',
-  './pwa-512x512.png',
-  './pwa-maskable-512x512.png'
+  './favicon-16.png',
+  './favicon-32.png',
+  './apple-touch-icon.png',
+  './icon-192.png',
+  './icon-192-maskable.png',
+  './icon-512.png',
+  './icon-512-maskable.png'
 ];
 
 self.addEventListener('install', (event) => {
