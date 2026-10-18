@@ -1718,7 +1718,28 @@ function renderGridView(container) {
     return;
   }
 
-  const itemsHtml = filtered.map((item) => renderItemCardHtml(item)).join('');
+  const adCardSnippet = `
+    <div class="w-full bg-stone-50 border-2 border-dashed border-stone-300 rounded-2xl p-4 flex flex-col items-center justify-center text-center space-y-2 shadow-xs">
+      <div class="flex items-center justify-between w-full px-1">
+        <span class="text-[10px] font-black uppercase tracking-wider bg-stone-200 text-stone-700 px-2 py-0.5 rounded">Sponsored</span>
+        <span class="text-xs text-stone-400 font-medium">Recommendation</span>
+      </div>
+      <div class="w-full py-3 flex flex-col items-center justify-center text-stone-500 space-y-1">
+        <i data-lucide="package" class="w-6 h-6 text-stone-400"></i>
+        <span class="text-sm font-bold text-stone-800">Clear Storage Bins & Labels</span>
+        <span class="text-xs text-stone-500 max-w-xs">Organize shelves and drawers with durable stackable containers</span>
+      </div>
+      <!-- Ad code placeholder: In-Feed unit will be mounted here -->
+    </div>
+  `;
+
+  let itemsHtml = '';
+  filtered.forEach((item, index) => {
+    itemsHtml += renderItemCardHtml(item);
+    if ((index + 1) % 6 === 0 && index !== filtered.length - 1) {
+      itemsHtml += adCardSnippet;
+    }
+  });
 
   container.innerHTML = `
     <div class="space-y-3.5 w-full flex flex-col items-center">
@@ -3218,6 +3239,16 @@ function renderSpotCheckStep() {
         <p class="text-sm text-stone-600 max-w-xs mx-auto text-center">
           You confirmed your items are right where they belong.
         </p>
+
+        <!-- Post-Task Completion Ad Space -->
+        <div class="w-full my-3 p-3.5 bg-stone-50 border border-stone-200 rounded-2xl flex flex-col items-center justify-center text-center text-stone-500 space-y-1.5 shadow-xs">
+          <div class="flex items-center justify-between w-full px-1">
+            <span class="text-[10px] font-black uppercase tracking-wider bg-stone-200 text-stone-700 px-2 py-0.5 rounded">Ad</span>
+            <span class="text-xs text-stone-400">Sponsored</span>
+          </div>
+          <p class="text-xs text-stone-700 font-bold">Keep home supplies stocked with doorstep deliveries.</p>
+        </div>
+
         <button
           onclick="switchPage('home')"
           class="px-6 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-bold hover:bg-stone-800 transition-colors cursor-pointer shadow-soft text-center"
