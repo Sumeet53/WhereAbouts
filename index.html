@@ -461,69 +461,48 @@
 
               <!-- Item Name -->
               <div class="space-y-1.5 text-center">
-                <label class="block font-bold text-stone-800 text-sm">Item Name *</label>
+                <label class="block font-extrabold text-stone-900 text-base sm:text-lg">Item Name *</label>
                 <input
                   type="text"
                   id="add-item-name"
                   required
                   placeholder="e.g. Cordless Drill, Extra Car Keys, Passports"
-                  class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-sm font-semibold text-stone-900 text-center focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  class="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-base font-bold text-stone-900 text-center focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
               </div>
 
               <!-- Category -->
               <div class="space-y-1.5 text-center">
-                <label class="block font-bold text-stone-800 text-xs">Category / Type</label>
+                <label class="block font-bold text-stone-800 text-sm">Category / Type</label>
                 <select
                   id="add-item-category"
-                  class="w-full px-4 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold text-stone-900 text-center focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                  class="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-sm font-semibold text-stone-900 text-center focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
                 ></select>
               </div>
 
-              <!-- Storage Spot -->
-              <div class="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3 text-center">
-                <div class="font-bold text-amber-950 text-xs sm:text-sm flex items-center justify-center gap-1.5">
+             <!-- Storage Location (2 Fields: Room & Location) -->
+              <div class="p-4 bg-amber-50/70 border-2 border-amber-200/90 rounded-2xl space-y-3.5 text-left">
+                <div class="font-extrabold text-amber-950 text-sm sm:text-base flex items-center justify-center sm:justify-start gap-2">
                   <i data-lucide="map-pin" class="w-4 h-4 text-amber-600 shrink-0"></i>
                   <span>Where is it stored?</span>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label class="block text-stone-700 mb-1 font-semibold text-center sm:text-left">Room *</label>
+                    <label class="block text-stone-800 mb-1.5 font-bold text-sm">Room *</label>
                     <select
                       id="add-item-room"
-                      class="w-full px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                      class="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-sm font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
                     ></select>
                   </div>
                   <div>
-                    <label class="block text-stone-700 mb-1 font-semibold text-center sm:text-left">Spot / Shelf *</label>
+                    <label class="block text-stone-800 mb-1.5 font-bold text-sm">Location / Shelf / Box *</label>
                     <input
                       type="text"
-                      id="add-item-zone"
+                      id="add-item-location-desc"
                       required
-                      placeholder="e.g. Top Shelf, Middle Drawer"
-                      class="w-full px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
-                  <div>
-                    <label class="block text-stone-700 mb-1 font-semibold text-center sm:text-left">Box / Container (optional)</label>
-                    <input
-                      type="text"
-                      id="add-item-container"
-                      placeholder="e.g. Grey Safe Box, Clear Bin #2"
-                      class="w-full px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-stone-700 mb-1 font-semibold text-center sm:text-left">Landmark Clue (optional)</label>
-                    <input
-                      type="text"
-                      id="add-item-landmark"
-                      placeholder='e.g. "Behind winter blankets"'
-                      class="w-full px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      placeholder="e.g. Closet top shelf in gray box, Behind winter coats"
+                      class="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-sm font-medium text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
                     />
                   </div>
                 </div>
@@ -1061,22 +1040,22 @@
           <i data-lucide="map-pin" class="w-6 h-6 text-amber-600"></i>
         </div>
         <div class="space-y-1">
-          <h3 class="text-base font-extrabold text-stone-900" id="relocate-title">Where is it now?</h3>
-          <p class="text-xs text-stone-500">Pick the new room &amp; shelf:</p>
+          <h3 class="text-lg font-black text-stone-900" id="relocate-title">Where is it now?</h3>
+          <p class="text-sm text-stone-600">Update the room and location spot:</p>
         </div>
-        <div class="space-y-2.5 text-left">
+        <div class="space-y-3 text-left">
           <div>
-            <label class="block text-[11px] font-bold text-stone-700 mb-1">New Room *</label>
-            <select id="relocate-room-select" class="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold text-stone-800"></select>
+            <label class="block text-xs font-bold text-stone-800 mb-1">New Room *</label>
+            <select id="relocate-room-select" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-semibold text-stone-900"></select>
           </div>
           <div>
-            <label class="block text-[11px] font-bold text-stone-700 mb-1">New Spot / Shelf / Drawer *</label>
-            <input type="text" id="relocate-zone-input" placeholder="e.g. Top shelf, Nightstand drawer" class="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs text-stone-900 font-medium" />
+            <label class="block text-xs font-bold text-stone-800 mb-1">New Location Spot *</label>
+            <input type="text" id="relocate-zone-input" placeholder="e.g. Nightstand top drawer, Gray box" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm text-stone-900 font-medium" />
           </div>
         </div>
         <div class="grid grid-cols-2 gap-2 pt-1">
-          <button type="button" onclick="closeRelocateModal()" class="py-2.5 px-4 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl cursor-pointer touch-manipulation">Cancel</button>
-          <button type="button" onclick="confirmRelocateItem()" class="py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs rounded-xl shadow-soft cursor-pointer touch-manipulation">Save Spot</button>
+          <button type="button" onclick="closeRelocateModal()" class="py-2.5 px-4 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-sm rounded-xl cursor-pointer touch-manipulation">Cancel</button>
+          <button type="button" onclick="confirmRelocateItem()" class="py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white font-bold text-sm rounded-xl shadow-soft cursor-pointer touch-manipulation">Save Spot</button>
         </div>
       </div>
     </div>
