@@ -1,4 +1,4 @@
-// FindIt - Everyday Physical Memory
+// WhereAbouts - Know where everything is.
 // Standard Vanilla PWA Engine (User-Friendly, Zero-Build & Centered Layout)
 
 const ITEMS_KEY = 'spatialcache_items_v1';
@@ -1165,7 +1165,7 @@ window.handleDailyCheckIn = function () {
 
   if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
     try {
-      new Notification('FindIt: Check-In Complete! 🔥', {
+      new Notification('WhereAbouts: Check-In Complete! 🔥', {
         body: `Day ${state.engagement.streak} locked in! Your home items and lent belongings are right in memory.`,
         icon: './icon.svg',
       });
@@ -1195,7 +1195,7 @@ window.toggleDailyNotifications = async function () {
       renderEngagementStatus();
       showToast('🔔 Daily reminders enabled! You will stay on top of all your items.');
 
-      new Notification('FindIt Reminders Active 🌟', {
+      new Notification('WhereAbouts Reminders Active 🌟', {
         body: 'Welcome! You will receive gentle reminders so you never misplace tools or forget lent items.',
         icon: './icon.svg',
       });
@@ -1218,7 +1218,7 @@ window.sendTestNotification = function () {
   const randomItem = sampleItems[Math.floor(Math.random() * sampleItems.length)];
 
   try {
-    new Notification('FindIt: 15s Memory Spot Check 📍', {
+    new Notification('WhereAbouts: 15s Memory Spot Check 📍', {
       body: `Quick check! Do you know where your ${randomItem} is stored? Tap to check!`,
       icon: './icon.svg',
       badge: './icon.svg',
@@ -1348,7 +1348,7 @@ window.handleNotThereChoice = function (choice) {
     case 'lent':
       showPromptDialog({
         title: `Who borrowed ${item.name}?`,
-        message: 'Enter borrower name to update FindIt’s tracking:',
+        message: 'Enter borrower name to update WhereAbouts’s tracking:',
         defaultValue: 'Friend or Neighbor',
         onConfirm: (borrower) => {
           item.lent = {
@@ -2297,7 +2297,7 @@ window.deleteItem = function (id) {
 
   showConfirmDialog({
     title: 'Delete Item',
-    message: `Remove "${item.name}" from FindIt? This action cannot be undone.`,
+    message: `Remove "${item.name}" from WhereAbouts? This action cannot be undone.`,
     confirmText: 'Delete',
     confirmClass: 'bg-rose-600 hover:bg-rose-700 text-white',
     onConfirm: () => {
@@ -3414,7 +3414,7 @@ window.installPWA = function () {
   state.deferredInstallPrompt.prompt();
   state.deferredInstallPrompt.userChoice.then((choiceResult) => {
     if (choiceResult.outcome === 'accepted') {
-      showToast('Thank you for installing FindIt!');
+      showToast('Thank you for installing WhereAbouts!');
     }
     state.deferredInstallPrompt = null;
     const installBtn = document.getElementById('btn-pwa-install');
