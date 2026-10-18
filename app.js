@@ -75,8 +75,14 @@ function showAuthGateway() {
 
   pages.forEach((p) => p.classList.add('hidden'));
   if (authGateway) authGateway.classList.remove('hidden');
-  if (bottomBar) bottomBar.classList.add('hidden');
-  if (header) header.classList.add('hidden');
+  if (bottomBar) {
+    bottomBar.classList.add('hidden');
+    bottomBar.style.display = 'none';
+  }
+  if (header) {
+    header.classList.add('hidden');
+    header.style.display = 'none';
+  }
 
   // Completely lock screen scrolling on the login screen
   document.body.style.overflow = 'hidden';
@@ -89,8 +95,14 @@ function hideAuthGateway() {
   const header = document.querySelector('header');
 
   if (authGateway) authGateway.classList.add('hidden');
-  if (bottomBar) bottomBar.classList.remove('hidden');
-  if (header) header.classList.remove('hidden');
+  if (bottomBar) {
+    bottomBar.classList.remove('hidden');
+    bottomBar.style.display = '';
+  }
+  if (header) {
+    header.classList.remove('hidden');
+    header.style.display = '';
+  }
 
   // Restore normal app scrolling once logged in
   document.body.style.overflow = '';
