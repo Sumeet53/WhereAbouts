@@ -1,7 +1,7 @@
 {
-  "name": "FindIt - Everyday Physical Memory",
-  "short_name": "FindIt",
-  "description": "The search engine for your physical home and belongings. Instantly recall where you stored everyday items.",
+  "name": "WhereAbouts - Know where everything is.",
+  "short_name": "WhereAbouts",
+  "description": "Know where everything is. Instantly recall where you stored everyday items, spare keys, documents, and tools.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
