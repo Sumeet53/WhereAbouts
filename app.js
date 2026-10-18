@@ -77,6 +77,10 @@ function showAuthGateway() {
   if (authGateway) authGateway.classList.remove('hidden');
   if (bottomBar) bottomBar.classList.add('hidden');
   if (header) header.classList.add('hidden');
+
+  // Completely lock screen scrolling on the login screen
+  document.body.style.overflow = 'hidden';
+  document.documentElement.style.overflow = 'hidden';
 }
 
 function hideAuthGateway() {
@@ -87,6 +91,10 @@ function hideAuthGateway() {
   if (authGateway) authGateway.classList.add('hidden');
   if (bottomBar) bottomBar.classList.remove('hidden');
   if (header) header.classList.remove('hidden');
+
+  // Restore normal app scrolling once logged in
+  document.body.style.overflow = '';
+  document.documentElement.style.overflow = '';
 }
 
 window.continueAsGuest = function () {
