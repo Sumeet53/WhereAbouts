@@ -220,3 +220,8 @@ img, svg, video, canvas {
   width: 100%;
 }
 
+/* Ensure header and bottom bar are completely hidden during login screen */
+body:has(#view-auth:not(.hidden)) #bottom-bar,
+body:has(#view-auth:not(.hidden)) header {
+  display: none !important;
+}
