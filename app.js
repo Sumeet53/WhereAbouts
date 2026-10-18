@@ -1148,7 +1148,7 @@ window.handleDailyCheckIn = function () {
     try {
       new Notification('WhereAbouts: Check-In Complete! 🔥', {
         body: `Day ${state.engagement.streak} locked in! Your home items and lent belongings are right in memory.`,
-        icon: './icon.svg',
+        icon: './icon-192.png',
       });
     } catch (e) {
       console.warn('Notification error:', e);
@@ -1178,7 +1178,7 @@ window.toggleDailyNotifications = async function () {
 
       new Notification('WhereAbouts Reminders Active 🌟', {
         body: 'Welcome! You will receive gentle reminders so you never misplace tools or forget lent items.',
-        icon: './icon.svg',
+        icon: './icon-192.png',
       });
     } else {
       showToast('Notifications were not granted. You can re-enable anytime in browser settings.');
@@ -1201,8 +1201,8 @@ window.sendTestNotification = function () {
   try {
     new Notification('WhereAbouts: 15s Memory Spot Check 📍', {
       body: `Quick check! Do you know where your ${randomItem} is stored? Tap to check!`,
-      icon: './icon.svg',
-      badge: './icon.svg',
+      icon: './icon-192.png',
+      badge: './favicon-32.png',
     });
     showToast('Test notification sent! Check your screen/banner.');
   } catch (err) {
