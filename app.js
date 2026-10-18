@@ -31,24 +31,129 @@ const db = typeof firebase !== 'undefined' ? firebase.firestore() : null;
 
 let currentUser = null;
 let isSignUpMode = false;
+let isGuestSession = false;
 let firestoreUnsubscribe = null;
 
-// Automatic Real-Time Auth Listener
+// Auth State Watcher: Gates the entire application
 if (auth) {
   auth.onAuthStateChanged((user) => {
     currentUser = user;
-    updateAuthUI();
+    isGuestSession = false;
 
     if (user) {
+      // User is logged in: reveal main app interface
+      hideAuthGateway();
       attachRealtimeSync(user.uid);
+      updateAuthUI();
+      switchPage('home');
     } else {
+      // Detach real-time sync
       if (firestoreUnsubscribe) {
         firestoreUnsubscribe();
         firestoreUnsubscribe = null;
       }
+
+      // Check if user previously opted to continue as guest
+      const savedGuest = localStorage.getItem('whereabouts_guest_session');
+      if (savedGuest === 'true') {
+        isGuestSession = true;
+        hideAuthGateway();
+        updateAuthUI();
+      } else {
+        // Enforce the Login/Register Gateway as the very first screen
+        showAuthGateway();
+      }
     }
   });
 }
+
+function showAuthGateway() {
+  const authGateway = document.getElementById('view-auth');
+  const bottomBar = document.getElementById('bottom-bar');
+  const header = document.querySelector('header');
+  const pages = document.querySelectorAll('.page-view');
+
+  pages.forEach((p) => p.classList.add('hidden'));
+  if (authGateway) authGateway.classList.remove('hidden');
+  if (bottomBar) bottomBar.classList.add('hidden');
+  if (header) header.classList.add('hidden');
+}
+
+function hideAuthGateway() {
+  const authGateway = document.getElementById('view-auth');
+  const bottomBar = document.getElementById('bottom-bar');
+  const header = document.querySelector('header');
+
+  if (authGateway) authGateway.classList.add('hidden');
+  if (bottomBar) bottomBar.classList.remove('hidden');
+  if (header) header.classList.remove('hidden');
+}
+
+window.continueAsGuest = function () {
+  isGuestSession = true;
+  localStorage.setItem('whereabouts_guest_session', 'true');
+  hideAuthGateway();
+  updateAuthUI();
+  switchPage('home');
+  showToast('Continuing in offline local mode.');
+};
+
+window.toggleAuthMode = function () {
+  isSignUpMode = !isSignUpMode;
+  const title = document.getElementById('gateway-auth-title');
+  const subtitle = document.getElementById('gateway-auth-subtitle');
+  const submitBtn = document.getElementById('gateway-submit-btn');
+  const toggleMsg = document.getElementById('gateway-toggle-msg');
+  const toggleBtn = document.getElementById('gateway-toggle-btn');
+
+  if (isSignUpMode) {
+    if (title) title.textContent = 'Create an Account';
+    if (subtitle) subtitle.textContent = 'Register once to sync items across all your devices';
+    if (submitBtn) submitBtn.textContent = 'Sign Up';
+    if (toggleMsg) toggleMsg.textContent = 'Already have an account?';
+    if (toggleBtn) toggleBtn.textContent = 'Sign In';
+  } else {
+    if (title) title.textContent = 'Sign In to Continue';
+    if (subtitle) subtitle.textContent = 'Sync your belongings securely across devices';
+    if (submitBtn) submitBtn.textContent = 'Sign In';
+    if (toggleMsg) toggleMsg.textContent = 'Need an account?';
+    if (toggleBtn) toggleBtn.textContent = 'Sign Up';
+  }
+};
+
+window.handleAuthSubmit = async function (e) {
+  e.preventDefault();
+  if (!auth) {
+    showToast('Firebase not initialized. Check internet connection.');
+    return;
+  }
+  const emailInput = document.getElementById('auth-email');
+  const passInput = document.getElementById('auth-password');
+  const email = emailInput ? emailInput.value.trim() : '';
+  const password = passInput ? passInput.value : '';
+
+  try {
+    if (isSignUpMode) {
+      await auth.createUserWithEmailAndPassword(email, password);
+      localStorage.removeItem('whereabouts_guest_session');
+      showToast('Account created & synced!');
+    } else {
+      await auth.signInWithEmailAndPassword(email, password);
+      localStorage.removeItem('whereabouts_guest_session');
+      showToast('Signed in successfully!');
+    }
+  } catch (err) {
+    showToast(err.message || 'Authentication error');
+  }
+};
+
+window.handleSignOut = async function () {
+  if (!auth) return;
+  localStorage.removeItem('whereabouts_guest_session');
+  await auth.signOut();
+  showAuthGateway();
+  showToast('Signed out.');
+};
 
 // Live Two-Way Cloud Synchronization (Automatic across all logged-in devices)
 function attachRealtimeSync(uid) {
