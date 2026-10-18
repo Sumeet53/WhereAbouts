@@ -1035,11 +1035,11 @@ function renderSortFilterCard() {
     const missingBadge = document.getElementById('badge-missing-count');
     if (missingBadge) {
       missingBadge.textContent = missingCount;
-      missingBadge.style.display = missingCount > 0 ? 'inline-block' : 'none';
+      missingBadge.style.display = missingCount > 0 ? 'inline-flex' : 'none';
     }
     const labelSpan = filterMissingBtn.querySelector('.missing-label-text');
     if (labelSpan) {
-      labelSpan.textContent = `🚩 Missing ${missingCount > 0 ? missingCount : ''}`.trim();
+      labelSpan.textContent = '🚩 Missing';
     }
     if (state.filterMissingOnly) {
       filterMissingBtn.className =
