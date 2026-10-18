@@ -1,4 +1,4 @@
-const CACHE_NAME = 'findit-pwa-v2';
+const CACHE_NAME = 'whereabouts-pwa-v1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
