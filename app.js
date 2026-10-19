@@ -30,7 +30,7 @@ const auth = typeof firebase !== 'undefined' ? firebase.auth() : null;
 const db = typeof firebase !== 'undefined' ? firebase.firestore() : null;
 
 let currentUser = null;
-let isSignUpMode = false;
+let isSignUpMode = true; // Default to Sign Up on initial first launch
 let isGuestSession = false;
 let firestoreUnsubscribe = null;
 
@@ -118,13 +118,36 @@ window.continueAsGuest = function () {
   showToast('Continuing in offline local mode.');
 };
 
-window.toggleAuthMode = function () {
-  isSignUpMode = !isSignUpMode;
+// Toggle password text visibility between masked and plain text
+window.togglePasswordVisibility = function () {
+  const pwdInput = document.getElementById('auth-password');
+  const icon = document.getElementById('icon-pwd-toggle');
+  if (!pwdInput) return;
+
+  if (pwdInput.type === 'password') {
+    pwdInput.type = 'text';
+    if (icon) icon.setAttribute('data-lucide', 'eye-off');
+  } else {
+    pwdInput.type = 'password';
+    if (icon) icon.setAttribute('data-lucide', 'eye');
+  }
+  safeCreateIcons();
+};
+
+// Switch between Register (Sign Up) and Login (Sign In)
+window.toggleAuthMode = function (forceMode) {
+  if (typeof forceMode === 'boolean') {
+    isSignUpMode = forceMode;
+  } else {
+    isSignUpMode = !isSignUpMode;
+  }
+
   const title = document.getElementById('gateway-auth-title');
   const subtitle = document.getElementById('gateway-auth-subtitle');
   const submitBtn = document.getElementById('gateway-submit-btn');
   const toggleMsg = document.getElementById('gateway-toggle-msg');
   const toggleBtn = document.getElementById('gateway-toggle-btn');
+  const forgotBtn = document.getElementById('btn-forgot-password');
 
   if (isSignUpMode) {
     if (title) title.textContent = 'Create an Account';
@@ -132,13 +155,48 @@ window.toggleAuthMode = function () {
     if (submitBtn) submitBtn.textContent = 'Sign Up';
     if (toggleMsg) toggleMsg.textContent = 'Already have an account?';
     if (toggleBtn) toggleBtn.textContent = 'Sign In';
+    if (forgotBtn) forgotBtn.classList.add('hidden'); // Hide forgot password on registration
   } else {
     if (title) title.textContent = 'Sign In to Continue';
     if (subtitle) subtitle.textContent = 'Sync your belongings securely across devices';
     if (submitBtn) submitBtn.textContent = 'Sign In';
     if (toggleMsg) toggleMsg.textContent = 'Need an account?';
     if (toggleBtn) toggleBtn.textContent = 'Sign Up';
+    if (forgotBtn) forgotBtn.classList.remove('hidden'); // Show forgot password when signing in
   }
+  safeCreateIcons();
+};
+
+// Forgot Password / Password Reset Flow via Firebase Auth
+window.handleForgotPassword = async function () {
+  if (!auth) {
+    showToast('Authentication service unavailable.');
+    return;
+  }
+
+  const emailInput = document.getElementById('auth-email');
+  const email = emailInput ? emailInput.value.trim() : '';
+
+  if (!email) {
+    showToast('Please type your email address above first.');
+    if (emailInput) emailInput.focus();
+    return;
+  }
+
+  showConfirmDialog({
+    title: 'Reset Password',
+    message: `Send a secure password reset link to ${email}?`,
+    confirmText: 'Send Reset Link',
+    confirmClass: 'bg-stone-900 hover:bg-stone-800 text-white',
+    onConfirm: async () => {
+      try {
+        await auth.sendPasswordResetEmail(email);
+        showToast('Password reset email sent! Check your inbox.');
+      } catch (err) {
+        showToast(err.message || 'Could not send reset email.');
+      }
+    },
+  });
 };
 
 window.handleAuthSubmit = async function (e) {
