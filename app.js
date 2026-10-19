@@ -335,16 +335,37 @@ window.handleAuthSubmit = async function (e) {
   const passInput = document.getElementById('auth-password');
   const email = emailInput ? emailInput.value.trim() : '';
   const password = passInput ? passInput.value : '';
+  const successBanner = document.getElementById('gateway-signup-success');
 
   try {
     if (isSignUpMode) {
+      // 1. Create account in Firebase
       await auth.createUserWithEmailAndPassword(email, password);
-      showToast('Account created & synced!');
+      
+      // 2. Temporarily sign out so user explicitly signs in to verify credentials
+      await auth.signOut();
+
+      // 3. Display Green Success Notification Banner with Green Tick
+      if (successBanner) {
+        successBanner.classList.remove('hidden');
+        safeCreateIcons();
+      }
+
+      // 4. Pre-fill email, clear password, and transition screen to Sign-In
+      if (passInput) passInput.value = '';
+      
+      setTimeout(() => {
+        if (successBanner) successBanner.classList.add('hidden');
+        toggleAuthMode(false); // Switch to Sign In mode
+        showToast('Done · Please sign in with your new password', 'success');
+        if (passInput) passInput.focus();
+      }, 1800);
+
     } else {
       await auth.signInWithEmailAndPassword(email, password);
-      showToast('Signed in & synced!');
+      localStorage.removeItem('whereabouts_guest_session');
+      showToast('Done · Welcome back!', 'success');
     }
-    closeAuthModal();
   } catch (err) {
     showToast(err.message || 'Authentication error');
   }
@@ -861,17 +882,31 @@ function getItemLocationText(item) {
   return parts.join(' ') || 'General room area';
 }
 
-function showToast(message) {
+// Universal Notification Toast supporting Green "Done" confirmations
+function showToast(message, type = 'default') {
   const container = document.getElementById('toast-container');
   if (!container) return;
 
   const toast = document.createElement('div');
-  toast.className =
-    'bg-stone-900 text-white text-sm font-bold px-5 py-3 rounded-2xl shadow-elevated flex items-center justify-center gap-2 pointer-events-auto transform transition-all duration-200 -translate-y-3 opacity-0 text-center';
-  toast.innerHTML = `
-    <i data-lucide="sparkles" class="w-4 h-4 text-amber-400 shrink-0"></i>
-    <span>${escapeHtml(message)}</span>
-  `;
+  const isSuccess = type === 'success' || message.toLowerCase().includes('done') || message.toLowerCase().includes('saved') || message.toLowerCase().includes('found') || message.toLowerCase().includes('updated');
+
+  if (isSuccess) {
+    toast.className =
+      'bg-emerald-600 text-white text-sm sm:text-base font-extrabold px-6 py-3.5 rounded-2xl shadow-elevated flex items-center justify-center gap-2.5 pointer-events-auto transform transition-all duration-200 -translate-y-3 opacity-0 text-center border-2 border-emerald-400/80';
+    toast.innerHTML = `
+      <span class="w-6 h-6 rounded-full bg-white text-emerald-700 flex items-center justify-center shrink-0 shadow-xs">
+        <i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>
+      </span>
+      <span>${escapeHtml(message.startsWith('Done') ? message : `Done · ${message}`)}</span>
+    `;
+  } else {
+    toast.className =
+      'bg-stone-900 text-white text-sm font-bold px-5 py-3 rounded-2xl shadow-elevated flex items-center justify-center gap-2 pointer-events-auto transform transition-all duration-200 -translate-y-3 opacity-0 text-center';
+    toast.innerHTML = `
+      <i data-lucide="sparkles" class="w-4 h-4 text-amber-400 shrink-0"></i>
+      <span>${escapeHtml(message)}</span>
+    `;
+  }
 
   container.appendChild(toast);
   safeCreateIcons();
@@ -883,8 +918,13 @@ function showToast(message) {
   setTimeout(() => {
     toast.classList.add('opacity-0', 'translate-y-3');
     setTimeout(() => toast.remove(), 250);
-  }, 2800);
+  }, 2400);
 }
+
+// Quick trigger helper for explicit Done actions
+window.showDoneToast = function(subText = '') {
+  showToast(subText ? `Done · ${subText}` : 'Done', 'success');
+};
 
 function getDynamicTypes() {
   const counts = {};
@@ -1832,7 +1872,7 @@ window.confirmRelocateItem = function () {
   saveItems();
   closeRelocateModal();
   renderApp();
-  showToast(`Location updated! ${item.name} moved to ${newRoom} › ${newSpot}`, 'success');
+  showToast(`Done · Moved to ${newRoom} › ${newSpot}`, 'success');
 };
 
 // -------------------------------------------------------------------------
@@ -2476,7 +2516,7 @@ window.verifyLocation = function (id) {
   );
   saveItems();
   renderApp();
-  showToast('Spot confirmed! Location refreshed.', 'success');
+  showToast('Done · Spot confirmed!', 'success');
 };
 
 window.markItemFound = function (id) {
@@ -2486,7 +2526,7 @@ window.markItemFound = function (id) {
   );
   saveItems();
   renderApp();
-  showToast('Item found! Verified fresh today.', 'success');
+  showToast('Done · Item found and verified!', 'success');
 };
 
 window.changeItemQuantity = function (id, delta) {
@@ -2515,7 +2555,7 @@ window.returnLentItem = function (id) {
   );
   saveItems();
   renderApp();
-  showToast(`"${item.name}" returned home to ${item.location.room}`);
+  showToast(`Done · "${item.name}" returned home to ${item.location.room}`, 'success');
 };
 
 // -------------------------------------------------------------------------
@@ -3523,7 +3563,7 @@ window.handleSaveItemSubmit = function (e) {
       }
       return item;
     });
-    showToast(`Updated "${name}"`);
+    showToast(`Done · Updated "${name}"`, 'success');
     state.editingItemId = null;
   } else {
     const newItem = {
@@ -3540,7 +3580,7 @@ window.handleSaveItemSubmit = function (e) {
       createdAt: now,
     };
     state.items = [newItem, ...state.items];
-    showToast(`Saved "${name}" in ${room}`);
+    showToast(`Done · Saved "${name}" in ${room}`, 'success');
   }
 
   clearPhotoPreview();
