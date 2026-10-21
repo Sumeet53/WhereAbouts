@@ -2834,7 +2834,7 @@ function parseSentence(raw) {
   let text = raw.trim();
 
   text = text.replace(/^(?:i\s+(?:just\s+)?(?:put|placed|stored|kept|left|moved)\s+(?:the|my|a|an)?\s*)/i, '');
-  text = text.replace(/^(?:put|place|store|keep|leave)\s+(?:the|my|a|an)?\s*)/i, '');
+  text = text.replace(/^(?:put|place|store|keep|leave)\s+(?:the|my|a|an)?\s*/i, '');
 
   const roomKeywords = [
     { match: /master\s+bedroom|bedroom/i, name: 'Master Bedroom' },
