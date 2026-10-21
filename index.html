@@ -101,20 +101,30 @@
           <!-- White Auth Card -->
           <div class="w-full bg-white border border-stone-200/90 rounded-3xl p-6 shadow-elevated space-y-3.5 text-left">
             <div class="space-y-0.5 text-center">
-            <h2 id="gateway-auth-title" class="text-lg sm:text-xl font-black text-stone-900">Create an Account</h2>
-            <p id="gateway-auth-subtitle" class="text-[11px] sm:text-xs text-stone-500">Register once to sync items across all your devices</p>
-          </div>
-
-          <!-- Green Registration Success Banner (Hidden by default) -->
-          <div id="gateway-signup-success" class="hidden bg-emerald-50 border-2 border-emerald-500 rounded-2xl p-4 text-center space-y-1.5 shadow-xs transition-all">
-            <div class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto shadow-xs">
-              <i data-lucide="check" class="w-6 h-6 stroke-[3]"></i>
+              <h2 id="gateway-auth-title" class="text-lg sm:text-xl font-black text-stone-900">Sign In or Register</h2>
+              <p id="gateway-auth-subtitle" class="text-[11px] sm:text-xs text-stone-500">Sync your belongings securely across devices</p>
             </div>
-            <div class="text-sm font-black text-emerald-950">Successfully Signed Up!</div>
-            <p class="text-xs text-emerald-800 font-medium">Moving you to Sign In screen...</p>
-          </div>
 
-          <form id="gateway-auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-3 pt-1">
+            <!-- Green Registration Success Banner (Hidden by default) -->
+            <div id="gateway-signup-success" class="hidden bg-emerald-100 border-2 border-emerald-500 rounded-2xl p-3.5 text-center space-y-1 shadow-sm transition-all">
+              <div class="flex items-center justify-center gap-2 text-emerald-950 font-black text-sm sm:text-base">
+                <span class="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                  <i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>
+                </span>
+                <span>Successfully Signed Up!</span>
+              </div>
+              <p class="text-xs text-emerald-800 font-semibold">Please tap &ldquo;Sign In&rdquo; below to enter your account.</p>
+            </div>
+
+            <!-- Red Alert Banner for Existing Email or Auth Errors (Hidden by default) -->
+            <div id="gateway-auth-error" class="hidden bg-red-50 border-2 border-red-400 rounded-2xl p-3 text-center space-y-0.5 shadow-xs transition-all">
+              <div class="flex items-center justify-center gap-1.5 text-red-950 font-bold text-xs sm:text-sm">
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-red-600 shrink-0"></i>
+                <span id="gateway-error-msg">This email is already registered.</span>
+              </div>
+            </div>
+
+            <form id="gateway-auth-form" class="space-y-3.5 pt-1" onsubmit="return false;">
               <div>
                 <label class="block text-xs font-bold text-stone-800 mb-1">Email</label>
                 <input type="email" id="auth-email" required class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="you@example.com" />
@@ -124,7 +134,7 @@
               <div>
                 <div class="flex items-center justify-between mb-1">
                   <label class="block text-xs font-bold text-stone-800">Password</label>
-                  <button type="button" id="btn-forgot-password" onclick="handleForgotPassword()" class="text-[11px] text-amber-700 hover:underline font-semibold hidden">
+                  <button type="button" onclick="handleForgotPassword()" class="text-[11px] text-amber-700 hover:underline font-semibold">
                     Forgot Password?
                   </button>
                 </div>
@@ -136,14 +146,28 @@
                 </div>
               </div>
 
-              <div class="flex items-center justify-between text-xs pt-0.5">
-                <span id="gateway-toggle-msg" class="text-stone-500">Already have an account?</span>
-                <button type="button" id="gateway-toggle-btn" onclick="toggleAuthMode()" class="font-black text-amber-700 hover:underline cursor-pointer">Sign In</button>
-              </div>
+              <!-- Side-by-Side Action Buttons: Sign In and Sign Up -->
+              <div class="grid grid-cols-2 gap-2.5 pt-1.5 w-full">
+                <button
+                  type="button"
+                  id="btn-action-signin"
+                  onclick="handleAuthAction('signin')"
+                  class="w-full py-3 bg-stone-900 hover:bg-stone-800 active:scale-95 text-white font-black text-xs sm:text-sm rounded-xl shadow-soft cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                >
+                  <i data-lucide="log-in" class="w-4 h-4 text-amber-400"></i>
+                  <span>Sign In</span>
+                </button>
 
-              <button type="submit" id="gateway-submit-btn" class="w-full py-3 bg-stone-900 hover:bg-stone-800 text-white font-black text-sm rounded-xl shadow-soft cursor-pointer transition-all">
-                Sign Up
-              </button>
+                <button
+                  type="button"
+                  id="btn-action-signup"
+                  onclick="handleAuthAction('signup')"
+                  class="w-full py-3 bg-amber-400 hover:bg-amber-500 active:scale-95 text-stone-950 font-black text-xs sm:text-sm rounded-xl shadow-soft cursor-pointer transition-all flex items-center justify-center gap-1.5 border border-amber-500"
+                >
+                  <i data-lucide="user-plus" class="w-4 h-4 text-stone-950"></i>
+                  <span>Sign Up</span>
+                </button>
+              </div>
             </form>
 
             <div class="pt-2 text-center border-t border-stone-100">
