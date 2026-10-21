@@ -185,29 +185,30 @@
 
     <!-- ================= PAGE 1: HOME VIEW ================= -->
     <div id="view-home" class="page-view w-full space-y-4 flex flex-col items-center">
-      <!-- Search Input Card -->
-      <div class="w-full bg-white rounded-2xl border border-stone-200 p-3 sm:p-4 shadow-soft space-y-3">
+      <!-- Search & Filter Card (Centered & Contained, Zero Horizontal Overflow) -->
+      <div class="w-full max-w-xl mx-auto bg-white rounded-3xl border border-stone-200 p-3.5 sm:p-5 shadow-soft space-y-3.5 flex flex-col items-center">
+        <!-- Search Input -->
         <div class="relative w-full">
-          <i data-lucide="search" class="w-5 h-5 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <i data-lucide="search" class="w-4 h-4 sm:w-5 sm:h-5 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
           <input
             type="text"
             id="search-input"
-            placeholder="Search anything... (e.g., passport, drill, chabi, dawai)"
-            class="w-full pl-11 pr-24 py-3 bg-stone-50 border border-stone-200 rounded-xl text-sm sm:text-base font-semibold text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-stone-400"
+            placeholder="Search items, spots, keywords..."
+            class="w-full pl-10 sm:pl-11 pr-20 py-2.5 sm:py-3 bg-stone-50 border border-stone-200 rounded-2xl text-xs sm:text-sm font-semibold text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-stone-400 transition-all"
           />
           <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
             <button
               id="btn-clear-search"
               onclick="clearSearchInput()"
               style="display: none;"
-              class="p-1.5 text-stone-400 hover:text-stone-600 rounded-lg hover:bg-stone-100"
+              class="p-1.5 text-stone-400 hover:text-stone-600 rounded-lg hover:bg-stone-100 cursor-pointer"
               title="Clear search"
             >
-              <i data-lucide="x" class="w-4 h-4"></i>
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
             </button>
             <button
               onclick="startQuickVoiceFromHeader()"
-              class="p-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg transition-colors cursor-pointer"
+              class="p-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl transition-colors cursor-pointer"
               title="Speak to add or find"
             >
               <i data-lucide="mic" class="w-4 h-4 text-amber-700"></i>
@@ -215,43 +216,48 @@
           </div>
         </div>
 
-        <!-- Filter Chips & Dropdowns -->
-        <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-stone-100 text-xs">
-          <div class="flex flex-wrap items-center gap-1.5">
-            <button id="filter-btn-all" onclick="resetAllFilters()" class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer bg-stone-900 text-white shadow-xs">
-              All (<span id="stat-total-items">0</span>)
-            </button>
-            <button id="filter-btn-missing" onclick="toggleMissingFilter()" class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-red-50 flex items-center gap-1.5">
-              <span class="missing-label-text">🚩 Missing</span>
-              <span id="badge-missing-count" class="hidden px-1.5 py-0.2 bg-red-600 text-white font-extrabold rounded-full text-[10px]">0</span>
-            </button>
-            <button id="filter-btn-lent" onclick="toggleLentFilter()" class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-rose-50 flex items-center gap-1.5">
-              <span>🤝 Lent</span>
-              <span id="badge-lent-count" class="hidden px-1.5 py-0.2 bg-rose-500 text-white font-bold rounded-full text-[10px]">0</span>
-            </button>
-            <button id="filter-btn-low" onclick="toggleLowStockFilter()" class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-amber-50 flex items-center gap-1.5">
-              <span>📉 Low Stock</span>
-              <span id="badge-low-count" class="hidden px-1.5 py-0.2 bg-amber-500 text-stone-950 font-bold rounded-full text-[10px]">0</span>
-            </button>
-            <button id="btn-active-reset" onclick="resetAllFilters()" class="hidden px-2 py-1 text-xs text-rose-600 hover:underline font-bold">
-              Clear Filters
-            </button>
-          </div>
+        <!-- [1] Centered Filter Tags Row -->
+        <div class="w-full flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+          <button id="filter-btn-all" onclick="resetAllFilters()" class="px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer bg-stone-900 text-white shadow-xs">
+            All (<span id="stat-total-items">0</span>)
+          </button>
+          <button id="filter-btn-missing" onclick="toggleMissingFilter()" class="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-red-50 flex items-center gap-1 shadow-xs">
+            <span class="missing-label-text">🚩 Missing</span>
+            <span id="badge-missing-count" class="hidden px-1.5 py-0.2 bg-red-600 text-white font-black rounded-full text-[10px]">0</span>
+          </button>
+          <button id="filter-btn-lent" onclick="toggleLentFilter()" class="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-rose-50 flex items-center gap-1 shadow-xs">
+            <span>🤝 Lent</span>
+            <span id="badge-lent-count" class="hidden px-1.5 py-0.2 bg-rose-500 text-white font-bold rounded-full text-[10px]">0</span>
+          </button>
+          <button id="filter-btn-low" onclick="toggleLowStockFilter()" class="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-amber-50 flex items-center gap-1 shadow-xs">
+            <span>📉 Low Stock</span>
+            <span id="badge-low-count" class="hidden px-1.5 py-0.2 bg-amber-500 text-stone-950 font-bold rounded-full text-[10px]">0</span>
+          </button>
+          <button id="btn-active-reset" onclick="resetAllFilters()" class="hidden px-2.5 py-1 text-xs text-rose-600 hover:underline font-bold cursor-pointer">
+            Clear Filters
+          </button>
+        </div>
 
-          <div class="flex items-center gap-1.5 ml-auto">
-            <select id="filter-type-select" onchange="handleTypeFilterChange(this.value)" class="bg-stone-50 border border-stone-200 text-xs font-semibold rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400">
+        <!-- [2] Fully Contained 3-Column Dropdown Grid (No Horizontal Overflow) -->
+        <div class="w-full grid grid-cols-3 gap-1.5 sm:gap-2 pt-2 border-t border-stone-100">
+          <div class="w-full min-w-0">
+            <select id="filter-type-select" onchange="handleTypeFilterChange(this.value)" class="w-full bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-800 text-[11px] sm:text-xs font-bold rounded-xl px-2 py-2 truncate focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer text-center">
               <option value="All">All Types</option>
             </select>
-            <select id="filter-location-select" onchange="handleLocationFilterChange(this.value)" class="bg-stone-50 border border-stone-200 text-xs font-semibold rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400">
+          </div>
+          <div class="w-full min-w-0">
+            <select id="filter-location-select" onchange="handleLocationFilterChange(this.value)" class="w-full bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-800 text-[11px] sm:text-xs font-bold rounded-xl px-2 py-2 truncate focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer text-center">
               <option value="All">All Locations</option>
             </select>
-            <select id="sort-order-select" onchange="handleSortOrderChange(this.value)" class="bg-stone-50 border border-stone-200 text-xs font-semibold rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400">
+          </div>
+          <div class="w-full min-w-0">
+            <select id="sort-order-select" onchange="handleSortOrderChange(this.value)" class="w-full bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-800 text-[11px] sm:text-xs font-bold rounded-xl px-2 py-2 truncate focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer text-center">
               <option value="recent">Recent</option>
               <option value="name-asc">A to Z</option>
               <option value="name-desc">Z to A</option>
               <option value="room-asc">Room</option>
               <option value="category">Category</option>
-              <option value="verified">Verification</option>
+              <option value="verified">Verified</option>
             </select>
           </div>
         </div>
