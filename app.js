@@ -1346,7 +1346,7 @@ function renderSortFilterCard() {
   const typeSelect = document.getElementById('filter-type-select');
   if (typeSelect) {
     const totalCount = state.items.length;
-    let typeOptions = `<option value="All">All Types (${totalCount} items)</option>`;
+    let typeOptions = `<option value="All">Types (${totalCount})</option>`;
     dynamicTypes.forEach((t) => {
       const isSel = state.selectedCategory === t.name ? 'selected' : '';
       typeOptions += `<option value="${escapeHtml(t.name)}" ${isSel}>${escapeHtml(t.name)} (${t.count})</option>`;
@@ -1358,7 +1358,7 @@ function renderSortFilterCard() {
   const locSelect = document.getElementById('filter-location-select');
   if (locSelect) {
     const uniqueRoomsCount = dynamicLocations.length;
-    let locOptions = `<option value="All">All Locations (${uniqueRoomsCount} rooms)</option>`;
+    let locOptions = `<option value="All">Rooms (${uniqueRoomsCount})</option>`;
     dynamicLocations.forEach((l) => {
       const isSel = state.selectedRoom === l.name ? 'selected' : '';
       locOptions += `<option value="${escapeHtml(l.name)}" ${isSel}>${escapeHtml(l.name)} (${l.count})</option>`;
