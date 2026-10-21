@@ -132,11 +132,6 @@ window.togglePasswordVisibility = function () {
 };
 
 window.handleAuthAction = async function (actionType) {
-  if (!auth) {
-    showToast('Firebase not initialized. Check internet connection.');
-    return;
-  }
-
   const emailInput = document.getElementById('auth-email');
   const passInput = document.getElementById('auth-password');
   const email = emailInput ? emailInput.value.trim() : '';
@@ -149,12 +144,20 @@ window.handleAuthAction = async function (actionType) {
   if (successBanner) successBanner.classList.add('hidden');
   if (errorBanner) errorBanner.classList.add('hidden');
 
+  if (!auth) {
+    if (errorBanner && errorMsg) {
+      errorMsg.textContent = 'Firebase is connecting or offline. Check network.';
+      errorBanner.classList.remove('hidden');
+    }
+    showToast('Firebase not initialized. Check internet connection.');
+    return;
+  }
+
   if (!email || !email.includes('@')) {
     if (errorBanner && errorMsg) {
       errorMsg.textContent = 'Please enter a valid email address.';
       errorBanner.classList.remove('hidden');
-    } else {
-      showToast('Please enter a valid email address.');
+      safeCreateIcons();
     }
     if (emailInput) emailInput.focus();
     return;
@@ -164,13 +167,18 @@ window.handleAuthAction = async function (actionType) {
     if (errorBanner && errorMsg) {
       errorMsg.textContent = 'Password must be at least 6 characters.';
       errorBanner.classList.remove('hidden');
-    } else {
-      showToast('Password must be at least 6 characters.');
+      safeCreateIcons();
     }
     if (passInput) passInput.focus();
     return;
   }
 
+  const btnSignIn = document.getElementById('btn-action-signin');
+  const btnSignUp = document.getElementById('btn-action-signup');
+  if (btnSignIn) btnSignIn.disabled = true;
+  if (btnSignUp) btnSignUp.disabled = true;
+
+  // SIGN UP ACTION
   if (actionType === 'signup') {
     try {
       suppressAuthGatewayTransition = true;
@@ -191,24 +199,23 @@ window.handleAuthAction = async function (actionType) {
 
     } catch (err) {
       suppressAuthGatewayTransition = false;
-      if (err.code === 'auth/email-already-in-use') {
-        if (errorBanner && errorMsg) {
+      if (errorBanner && errorMsg) {
+        if (err.code === 'auth/email-already-in-use') {
           errorMsg.textContent = 'This email is already registered. Please tap Sign In.';
-          errorBanner.classList.remove('hidden');
-          safeCreateIcons();
-        }
-        showToast('This email is already registered. Please Sign In.');
-      } else {
-        if (errorBanner && errorMsg) {
+        } else {
           errorMsg.textContent = err.message || 'Registration failed.';
-          errorBanner.classList.remove('hidden');
-          safeCreateIcons();
         }
-        showToast(err.message || 'Registration error');
+        errorBanner.classList.remove('hidden');
+        safeCreateIcons();
       }
+      showToast(err.code === 'auth/email-already-in-use' ? 'This email is already registered. Please Sign In.' : (err.message || 'Registration error'));
+    } finally {
+      if (btnSignIn) btnSignIn.disabled = false;
+      if (btnSignUp) btnSignUp.disabled = false;
     }
   }
 
+  // SIGN IN ACTION
   if (actionType === 'signin') {
     try {
       await auth.signInWithEmailAndPassword(email, password);
@@ -217,7 +224,7 @@ window.handleAuthAction = async function (actionType) {
     } catch (err) {
       if (errorBanner && errorMsg) {
         if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-          errorMsg.textContent = 'Account not found or incorrect password. Need an account? Tap Sign Up.';
+          errorMsg.textContent = 'Account not found or wrong password. Need an account? Tap Sign Up.';
         } else if (err.code === 'auth/wrong-password') {
           errorMsg.textContent = 'Incorrect password. Tap Forgot Password to reset.';
         } else {
@@ -227,6 +234,9 @@ window.handleAuthAction = async function (actionType) {
         safeCreateIcons();
       }
       showToast(err.message || 'Sign in error');
+    } finally {
+      if (btnSignIn) btnSignIn.disabled = false;
+      if (btnSignUp) btnSignUp.disabled = false;
     }
   }
 };
@@ -3626,7 +3636,6 @@ function renderSpotCheckStep() {
           You confirmed your items are right where they belong.
         </p>
 
-        <!-- Post-Task Completion Ad Space -->
         <div class="w-full my-3 p-3.5 bg-stone-50 border border-stone-200 rounded-2xl flex flex-col items-center justify-center text-center text-stone-500 space-y-1.5 shadow-xs">
           <div class="flex items-center justify-between w-full px-1">
             <span class="text-[10px] font-black uppercase tracking-wider bg-stone-200 text-stone-700 px-2 py-0.5 rounded">Ad</span>
