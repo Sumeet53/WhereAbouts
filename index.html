@@ -1,1142 +1,696 @@
-<!doctype html>
-<html lang="en" class="overflow-x-hidden">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>WhereAbouts - Know where everything is.</title>
-    <meta name="description" content="Know where everything is. The friendly search engine for your home and belongings to instantly recall where you stored everyday items, spare keys, documents, and lent tools." />
-    <meta property="og:title" content="WhereAbouts - Know where everything is." />
-    <meta property="og:description" content="Know where everything is. The friendly search engine for your home and belongings to instantly recall where you stored everyday items, spare keys, documents, and lent tools." />
-    <meta property="og:type" content="website" />
-    <meta name="theme-color" content="#fef08a" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="WhereAbouts" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>WhereAbouts - Know where everything is</title>
 
-    <!-- PWA Manifest & Icons -->
-    <link rel="manifest" href="./manifest.json" />
-    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+  <!-- PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="WhereAbouts" />
+  <meta name="theme-color" content="#f5f5f4" />
+  <link rel="manifest" href="./manifest.json" />
 
-    <!-- Tailwind CDN for Zero-Build Vanilla Delivery -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            boxShadow: {
-              'soft': '0 2px 10px -2px rgba(0, 0, 0, 0.05), 0 1px 3px -1px rgba(0, 0, 0, 0.03)',
-              'elevated': '0 10px 25px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.03)',
-            }
+  <!-- App Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          boxShadow: {
+            'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+            'elevated': '0 10px 30px -4px rgba(0, 0, 0, 0.1)',
+            'xs': '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
           }
         }
       }
-    </script>
+    };
+  </script>
 
-    <!-- Lucide Icons CDN -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="./style.css" />
-  </head>
-  <body class="min-h-screen text-stone-800 flex flex-col font-sans selection:bg-amber-100 selection:text-amber-900 overflow-x-hidden w-full max-w-full">
-    
-    <!-- Top Navigation Bar - Clean, Compact & Centered -->
-    <header class="bg-white/90 backdrop-blur-md border-b border-stone-200/80 sticky top-0 z-40 w-full shadow-xs">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 w-full py-2.5 flex items-center justify-between">
-        
-        <!-- Left spacer for visual balance -->
-        <div class="w-8 sm:w-16"></div>
+  <!-- Firebase Compat CDN (Zero-Build CDN) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-        <!-- Big Prominent WhereAbouts Branding (Centered) -->
-        <button type="button" class="flex items-center justify-center gap-3.5 cursor-pointer bg-transparent border-0 p-0 text-stone-900 touch-manipulation" onclick="scrollToTopView()" title="WhereAbouts Home">
-          <img src="./apple-touch-icon.png" alt="WhereAbouts Logo" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-contain shadow-soft shrink-0" />
-          <div class="flex flex-col items-start justify-center text-left">
-            <h1 class="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight leading-none">WhereAbouts</h1>
-            <span class="text-xs sm:text-sm text-stone-500 font-semibold mt-1">Know where everything is.</span>
-          </div>
-        </button>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body class="bg-stone-50 text-stone-900 min-h-screen flex flex-col font-sans antialiased selection:bg-amber-200">
 
-        <!-- Right Side: Account Profile & PWA Install -->
-        <div class="flex items-center justify-end gap-1.5">
-          <button
-            type="button"
-            onclick="switchPage('about')"
-            id="btn-header-account"
-            class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-extrabold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-xs touch-manipulation"
-            title="Account & Profile"
-          >
-            <i data-lucide="user" class="w-3.5 h-3.5 text-amber-600"></i>
-            <span id="header-auth-label">Account</span>
-          </button>
-
-          <button
-            id="btn-pwa-install"
-            onclick="installPWA()"
-            class="hidden px-2.5 py-1.5 bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1 shadow-soft touch-manipulation"
-            title="Install app to your home screen"
-          >
-            <i data-lucide="download" class="w-3.5 h-3.5 shrink-0"></i>
-            <span class="hidden sm:inline">Install</span>
-          </button>
+  <!-- ================= TOP APP HEADER ================= -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/90 shadow-xs">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+      <!-- Left: Logo & Title -->
+      <div class="flex items-center gap-2.5 cursor-pointer" onclick="switchPage('home')">
+        <img src="./apple-touch-icon.png" alt="WhereAbouts Logo" class="w-9 h-9 rounded-xl object-contain shadow-xs shrink-0" />
+        <div>
+          <span class="text-lg font-black tracking-tight text-stone-900 block leading-tight">WhereAbouts</span>
+          <span class="text-[10px] text-stone-500 font-semibold block leading-none">Home Inventory</span>
         </div>
       </div>
-    </header>
 
-    <!-- Main Container - Centered Alignment & Bottom Bar Spacing -->
-    <main class="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 pt-4 pb-28 space-y-5 flex flex-col items-center">
-
-      <!-- ================= GATEWAY: CLEAN FIXED FULL-SCREEN (NO SCROLLING) ================= -->
-      <div id="view-auth" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-50 overflow-hidden">
-        <div class="w-full max-w-sm flex flex-col items-center justify-center text-center space-y-4">
-          <!-- Logo & Header -->
-          <div class="flex flex-col items-center justify-center space-y-1.5">
-            <img src="./apple-touch-icon.png" alt="WhereAbouts Logo" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-contain shadow-soft shrink-0" />
-            <h1 class="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight leading-none">WhereAbouts</h1>
-            <p class="text-xs sm:text-sm text-stone-500 font-semibold">Know where everything is.</p>
-          </div>
-
-          <!-- White Auth Card -->
-          <div class="w-full bg-white border border-stone-200/90 rounded-3xl p-6 shadow-elevated space-y-3.5 text-left">
-            <div class="space-y-0.5 text-center">
-              <h2 id="gateway-auth-title" class="text-lg sm:text-xl font-black text-stone-900">Sign In or Register</h2>
-              <p id="gateway-auth-subtitle" class="text-[11px] sm:text-xs text-stone-500">Sync your belongings securely across devices</p>
-            </div>
-
-            <!-- Green Registration Success Banner (Hidden by default) -->
-            <div id="gateway-signup-success" class="hidden bg-emerald-100 border-2 border-emerald-500 rounded-2xl p-3.5 text-center space-y-1 shadow-sm transition-all">
-              <div class="flex items-center justify-center gap-2 text-emerald-950 font-black text-sm sm:text-base">
-                <span class="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                  <i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>
-                </span>
-                <span>Successfully Signed Up!</span>
-              </div>
-              <p class="text-xs text-emerald-800 font-semibold">Please tap &ldquo;Sign In&rdquo; below to enter your account.</p>
-            </div>
-
-            <!-- Red Alert Banner for Existing Email or Auth Errors (Hidden by default) -->
-            <div id="gateway-auth-error" class="hidden bg-red-50 border-2 border-red-400 rounded-2xl p-3 text-center space-y-0.5 shadow-xs transition-all">
-              <div class="flex items-center justify-center gap-1.5 text-red-950 font-bold text-xs sm:text-sm">
-                <i data-lucide="alert-triangle" class="w-4 h-4 text-red-600 shrink-0"></i>
-                <span id="gateway-error-msg">This email is already registered.</span>
-              </div>
-            </div>
-
-            <form id="gateway-auth-form" class="space-y-3.5 pt-1" onsubmit="return false;">
-              <div>
-                <label class="block text-xs font-bold text-stone-800 mb-1">Email</label>
-                <input type="email" id="auth-email" required class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="you@example.com" />
-              </div>
-
-              <!-- Password Input with Show / Hide Toggle -->
-              <div>
-                <div class="flex items-center justify-between mb-1">
-                  <label class="block text-xs font-bold text-stone-800">Password</label>
-                  <button type="button" onclick="handleForgotPassword()" class="text-[11px] text-amber-700 hover:underline font-semibold">
-                    Forgot Password?
-                  </button>
-                </div>
-                <div class="relative w-full">
-                  <input type="password" id="auth-password" required minlength="6" class="w-full pl-3.5 pr-10 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="At least 6 characters" />
-                  <button type="button" onclick="togglePasswordVisibility()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 p-1 cursor-pointer focus:outline-none" title="Show or hide password">
-                    <i data-lucide="eye" id="icon-pwd-toggle" class="w-4 h-4"></i>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Side-by-Side Action Buttons: Sign In and Sign Up -->
-              <div class="grid grid-cols-2 gap-2.5 pt-1.5 w-full">
-                <button
-                  type="button"
-                  id="btn-action-signin"
-                  onclick="handleAuthAction('signin')"
-                  class="w-full py-3 bg-stone-900 hover:bg-stone-800 active:scale-95 text-white font-black text-xs sm:text-sm rounded-xl shadow-soft cursor-pointer transition-all flex items-center justify-center gap-1.5"
-                >
-                  <i data-lucide="log-in" class="w-4 h-4 text-amber-400"></i>
-                  <span>Sign In</span>
-                </button>
-
-                <button
-                  type="button"
-                  id="btn-action-signup"
-                  onclick="handleAuthAction('signup')"
-                  class="w-full py-3 bg-amber-400 hover:bg-amber-500 active:scale-95 text-stone-950 font-black text-xs sm:text-sm rounded-xl shadow-soft cursor-pointer transition-all flex items-center justify-center gap-1.5 border border-amber-500"
-                >
-                  <i data-lucide="user-plus" class="w-4 h-4 text-stone-950"></i>
-                  <span>Sign Up</span>
-                </button>
-              </div>
-            </form>
-
-            <div class="pt-2 text-center border-t border-stone-100">
-              <button type="button" onclick="continueAsGuest()" class="text-xs text-stone-400 hover:text-stone-700 font-semibold cursor-pointer underline">
-                Continue in Offline Guest Mode &rarr;
-              </button>
-            </div>
-          </div>
-        </div>
+      <!-- Center: Quick Streak Badge -->
+      <div onclick="switchPage('streak')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1 rounded-full flex items-center gap-1.5 transition-colors shadow-xs" title="Tap to check habits">
+        <span class="text-xs">🔥</span>
+        <span id="header-streak-badge" class="text-xs font-black text-amber-900">3 Days</span>
       </div>
-      
-      <!-- ================= PAGE 1: HOME VIEW ================= -->
-      <div id="view-home" class="page-view w-full space-y-4 flex flex-col items-center">
-        
-        <!-- Always-Visible Hero Capture Banner -->
+
+      <!-- Right Side: Account Profile & PWA Install -->
+      <div class="flex items-center justify-end gap-1.5">
         <button
           type="button"
-          onclick="switchPage('add')"
-          class="w-full bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-300 hover:from-amber-500 hover:to-yellow-400 active:opacity-90 p-3.5 sm:p-4 rounded-3xl shadow-soft flex items-center justify-between gap-3 text-stone-950 cursor-pointer transition-all border border-amber-400/60 group text-left touch-manipulation"
-          title="Tap to log where you just placed an item"
+          onclick="switchPage('about')"
+          id="btn-header-account"
+          class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-extrabold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-xs touch-manipulation"
+          title="Account & Profile"
         >
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-10 h-10 rounded-2xl bg-stone-950 text-amber-300 flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
-              <i data-lucide="map-pin" class="w-5 h-5 text-amber-300"></i>
-            </div>
-            <div class="text-left min-w-0">
-              <div class="flex items-center gap-2">
-                <span class="text-xs sm:text-base font-extrabold tracking-tight truncate">Just placed something somewhere? Log its location now</span>
-              </div>
-              <p class="text-[11px] sm:text-xs text-stone-800 font-medium leading-tight mt-0.5 truncate">
-                Say or capture: <em>"Keys in hallway drawer"</em> &bull; Quick voice, photo, or text log
-              </p>
-            </div>
-          </div>
-          <div class="shrink-0 flex items-center gap-1.5 bg-stone-950 text-white px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold shadow-xs">
-            <span>Log Location</span>
-            <i data-lucide="plus" class="w-4 h-4 text-amber-400"></i>
-          </div>
+          <i data-lucide="user" class="w-3.5 h-3.5 text-amber-600"></i>
+          <span id="header-auth-label">Account</span>
         </button>
 
-        <!-- Dynamic Sort & Filter Card -->
-        <section id="sort-filter-card" class="w-full bg-white/95 backdrop-blur-sm border border-stone-200/90 rounded-3xl p-4 sm:p-5 shadow-soft space-y-3.5 flex flex-col items-center justify-center text-center">
-          
-          <!-- Search Box & Natural Query Quick Suggestions -->
-          <div class="relative w-full max-w-xl mx-auto space-y-2">
-            <div class="relative w-full">
-              <i data-lucide="search" class="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-              <input
-                type="text"
-                id="search-input"
-                placeholder="Search naturally: 'that thing for the TV cable', 'passport', 'chabi'..."
-                class="w-full pl-10 pr-9 py-2.5 bg-stone-50/90 hover:bg-stone-100/70 focus:bg-white border-2 border-stone-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm font-medium text-stone-900 placeholder:text-stone-400 text-center focus:outline-none transition-all shadow-xs"
-              />
-              <button
-                id="btn-clear-search"
-                onclick="clearSearchInput()"
-                class="hidden absolute right-3 top-1/2 -translate-y-1/2 p-1 text-stone-400 hover:text-stone-700 cursor-pointer rounded-full"
-                title="Clear search"
-              >
-                <i data-lucide="x" class="w-3.5 h-3.5"></i>
-              </button>
+        <button
+          id="btn-pwa-install"
+          onclick="installPWA()"
+          class="hidden px-2.5 py-1.5 bg-sky-500 hover:bg-sky-600 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1 shadow-soft touch-manipulation"
+          title="Install app to your home screen"
+        >
+          <i data-lucide="download" class="w-3.5 h-3.5 shrink-0"></i>
+          <span class="hidden sm:inline">Install</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 pt-4 pb-28 space-y-5 flex flex-col items-center">
+
+    <!-- ================= GATEWAY: CLEAN FIXED FULL-SCREEN (CENTERED & UNLOCKED) ================= -->
+    <div id="view-auth" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-50 overflow-hidden">
+      <div class="w-full max-w-sm flex flex-col items-center justify-center text-center space-y-4">
+        <!-- Logo & Header -->
+        <div class="flex flex-col items-center justify-center space-y-1.5">
+          <img src="./apple-touch-icon.png" alt="WhereAbouts Logo" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-contain shadow-soft shrink-0" />
+          <h1 class="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight leading-none">WhereAbouts</h1>
+          <p class="text-xs sm:text-sm text-stone-500 font-semibold">Know where everything is.</p>
+        </div>
+
+        <!-- White Centered Auth Card -->
+        <div class="w-full bg-white border border-stone-200/90 rounded-3xl p-6 shadow-elevated space-y-4 text-center flex flex-col items-center">
+          <div class="space-y-1 text-center w-full">
+            <h2 id="gateway-auth-title" class="text-xl sm:text-2xl font-black text-stone-900">Sign In or Register</h2>
+            <p id="gateway-auth-subtitle" class="text-xs text-stone-500">Sync your belongings securely across devices</p>
+          </div>
+
+          <!-- Green Registration Success Banner -->
+          <div id="gateway-signup-success" class="hidden w-full bg-emerald-100 border-2 border-emerald-500 rounded-2xl p-3.5 text-center space-y-1 shadow-xs transition-all">
+            <div class="flex items-center justify-center gap-2 text-emerald-950 font-black text-sm sm:text-base">
+              <span class="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                <i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>
+              </span>
+              <span>Successfully Signed Up!</span>
+            </div>
+            <p class="text-xs text-emerald-800 font-semibold">Please tap &ldquo;Sign In&rdquo; below to enter your account.</p>
+          </div>
+
+          <!-- Red Error Alert Banner -->
+          <div id="gateway-auth-error" class="hidden w-full bg-red-50 border-2 border-red-400 rounded-2xl p-3 text-center space-y-0.5 shadow-xs transition-all">
+            <div class="flex items-center justify-center gap-1.5 text-red-950 font-bold text-xs sm:text-sm">
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-red-600 shrink-0"></i>
+              <span id="gateway-error-msg">This email is already registered.</span>
+            </div>
+          </div>
+
+          <div class="w-full space-y-3.5 text-left">
+            <div>
+              <label class="block text-xs font-bold text-stone-800 mb-1">Email</label>
+              <input type="email" id="auth-email" required class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="you@example.com" autocomplete="email" />
             </div>
 
-            <!-- Quick Suggestion Pills -->
-            <div class="flex flex-wrap items-center justify-center gap-1.5 pt-0.5 text-[11px]">
-              <span class="text-stone-400 font-bold text-[10px] uppercase tracking-wider">Try:</span>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-bold text-stone-800">Password</label>
+                <button type="button" onclick="handleForgotPassword()" class="text-[11px] text-amber-700 hover:underline font-semibold cursor-pointer">
+                  Forgot Password?
+                </button>
+              </div>
+              <div class="relative w-full">
+                <input type="password" id="auth-password" required minlength="6" class="w-full pl-3.5 pr-10 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="At least 6 characters" autocomplete="current-password" />
+                <button type="button" onclick="togglePasswordVisibility()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 p-1 cursor-pointer focus:outline-none" title="Show or hide password">
+                  <i data-lucide="eye" id="icon-pwd-toggle" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Side-by-Side Centered Action Buttons -->
+            <div class="flex items-center justify-center gap-3 pt-2 w-full">
               <button
                 type="button"
-                onclick="setQuickSearchQuery('that thing for the TV cable')"
-                class="px-2.5 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-full font-medium transition-colors cursor-pointer touch-manipulation"
+                id="btn-action-signin"
+                onclick="handleAuthAction('signin')"
+                class="flex-1 py-3 px-4 bg-stone-900 hover:bg-stone-800 active:scale-95 text-white font-black text-xs sm:text-sm rounded-xl shadow-soft cursor-pointer transition-all flex items-center justify-center gap-1.5 touch-manipulation"
               >
-                &ldquo;that thing for the TV cable&rdquo;
+                <i data-lucide="log-in" class="w-4 h-4 text-amber-400"></i>
+                <span>Sign In</span>
               </button>
+
               <button
                 type="button"
-                onclick="setQuickSearchQuery('Passport')"
-                class="px-2.5 py-0.5 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-200 rounded-full font-medium transition-colors cursor-pointer touch-manipulation"
+                id="btn-action-signup"
+                onclick="handleAuthAction('signup')"
+                class="flex-1 py-3 px-4 bg-amber-400 hover:bg-amber-500 active:scale-95 text-stone-950 font-black text-xs sm:text-sm rounded-xl shadow-soft cursor-pointer transition-all flex items-center justify-center gap-1.5 border border-amber-500 touch-manipulation"
               >
-                &ldquo;Passport&rdquo;
-              </button>
-              <button
-                type="button"
-                onclick="setQuickSearchQuery('chabi')"
-                class="px-2.5 py-0.5 bg-yellow-50 hover:bg-yellow-100 text-yellow-900 border border-yellow-200 rounded-full font-medium transition-colors cursor-pointer touch-manipulation"
-              >
-                &ldquo;chabi&rdquo;
-              </button>
-              <button
-                type="button"
-                onclick="setQuickSearchQuery('dawai')"
-                class="px-2.5 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-200 rounded-full font-medium transition-colors cursor-pointer touch-manipulation"
-              >
-                &ldquo;dawai&rdquo;
-              </button>
-              <button
-                type="button"
-                onclick="setQuickSearchQuery('dril')"
-                class="px-2.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 rounded-full font-medium transition-colors cursor-pointer touch-manipulation"
-                title="Typo test: finds DeWalt Drill"
-              >
-                &ldquo;dril&rdquo; (typo)
+                <i data-lucide="user-plus" class="w-4 h-4 text-stone-950"></i>
+                <span>Sign Up</span>
               </button>
             </div>
           </div>
 
-          <!-- Dynamic Dropdowns Row: Types, Locations, Sort Order -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full">
-            <div class="flex flex-col text-left">
-              <label class="text-[11px] font-bold text-stone-600 mb-1 flex items-center justify-center sm:justify-start gap-1">
-                <i data-lucide="tag" class="w-3 h-3 text-amber-600"></i>
-                <span>Type / Category</span>
-              </label>
-              <select
-                id="filter-type-select"
-                onchange="handleTypeFilterChange(this.value)"
-                class="w-full px-3 py-2 bg-stone-50 hover:bg-stone-100 border border-stone-200 rounded-xl text-xs font-semibold text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer text-center sm:text-left transition-colors"
-              >
-                <option value="All">All Types (Loading...)</option>
-              </select>
-            </div>
-
-            <div class="flex flex-col text-left">
-              <label class="text-[11px] font-bold text-stone-600 mb-1 flex items-center justify-center sm:justify-start gap-1">
-                <i data-lucide="map-pin" class="w-3 h-3 text-indigo-600"></i>
-                <span>Location / Room</span>
-              </label>
-              <select
-                id="filter-location-select"
-                onchange="handleLocationFilterChange(this.value)"
-                class="w-full px-3 py-2 bg-stone-50 hover:bg-stone-100 border border-stone-200 rounded-xl text-xs font-semibold text-stone-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer text-center sm:text-left transition-colors"
-              >
-                <option value="All">All Locations (Loading...)</option>
-              </select>
-            </div>
-
-            <div class="flex flex-col text-left">
-              <label class="text-[11px] font-bold text-stone-600 mb-1 flex items-center justify-center sm:justify-start gap-1">
-                <i data-lucide="arrow-down-up" class="w-3 h-3 text-emerald-600"></i>
-                <span>Sort Items By</span>
-              </label>
-              <select
-                id="sort-order-select"
-                onchange="handleSortOrderChange(this.value)"
-                class="w-full px-3 py-2 bg-stone-50 hover:bg-stone-100 border border-stone-200 rounded-xl text-xs font-semibold text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer text-center sm:text-left transition-colors"
-              >
-                <option value="recent">Recently Added / Updated</option>
-                <option value="name-asc">Name (A &rarr; Z)</option>
-                <option value="name-desc">Name (Z &rarr; A)</option>
-                <option value="room-asc">Location (A &rarr; Z)</option>
-                <option value="category">Type / Category</option>
-                <option value="verified">Last Verified (Oldest first)</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Quick Status Pills -->
-          <div class="w-full pt-2 border-t border-stone-100 flex flex-wrap items-center justify-center gap-2">
-            <button
-              id="filter-btn-all"
-              onclick="resetAllFilters()"
-              class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer bg-stone-900 text-white shadow-xs"
-            >
-              All Items (<span id="stat-total-items">12</span>)
-            </button>
-
-            <button
-              id="filter-btn-lent"
-              onclick="toggleLentFilter()"
-              class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-rose-50 flex items-center gap-1.5"
-            >
-              <span>🤝 Lent Out</span>
-              <span id="badge-lent-count" class="hidden text-[10px] bg-rose-200 text-rose-950 px-1.5 py-0.2 rounded-full font-bold">0</span>
-            </button>
-
-            <button
-              id="filter-btn-low"
-              onclick="toggleLowStockFilter()"
-              class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-amber-50 flex items-center gap-1.5"
-            >
-              <span>⚠️ Running Low</span>
-              <span id="badge-low-count" class="hidden text-[10px] bg-red-100 text-red-700 px-1.5 py-0.2 rounded-full font-bold">0</span>
-            </button>
-
-            <button
-              id="filter-btn-missing"
-              onclick="toggleMissingFilter()"
-              class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-red-50 flex items-center gap-1.5"
-            >
-              <span class="missing-label-text">🚩 Missing</span>
-              <span id="badge-missing-count" class="hidden text-[11px] bg-red-600 text-white px-2 py-0.5 rounded-full font-extrabold leading-none items-center justify-center shadow-xs">0</span>
-            </button>
-
-            <button
-              id="btn-active-reset"
-              onclick="resetAllFilters()"
-              class="hidden px-2.5 py-1 text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 rounded-xl border border-amber-300 transition-colors cursor-pointer flex items-center gap-1"
-              title="Clear all active filters"
-            >
-              <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
-              <span>Reset Filters</span>
+          <div class="pt-2 text-center border-t border-stone-100 w-full">
+            <button type="button" onclick="continueAsGuest()" class="text-xs text-stone-400 hover:text-stone-700 font-semibold cursor-pointer underline">
+              Continue in Offline Guest Mode &rarr;
             </button>
           </div>
-        </section>
+        </div>
+      </div>
+    </div>
 
-        <!-- Top Native Ad Banner Container -->
-        <div id="ad-banner-slot-home" class="w-full max-w-md mx-auto my-1 flex flex-col items-center justify-center">
-          <div class="w-full bg-stone-100/80 border border-dashed border-stone-300 rounded-2xl p-2.5 flex items-center justify-between gap-3 text-stone-500 shadow-xs">
-            <div class="flex items-center gap-2 min-w-0">
-              <span class="text-[9px] font-black uppercase tracking-wider bg-stone-200 text-stone-600 px-1.5 py-0.5 rounded">Ad</span>
-              <span class="text-[11px] font-medium truncate text-stone-600">Sponsored Recommendation</span>
-            </div>
-            <div id="admob-banner-content" class="text-[10px] text-stone-400 font-semibold">
-              Ad Space
-            </div>
+    <!-- ================= PAGE 1: HOME VIEW ================= -->
+    <div id="view-home" class="page-view w-full space-y-4 flex flex-col items-center">
+      <!-- Search Input Card -->
+      <div class="w-full bg-white rounded-2xl border border-stone-200 p-3 sm:p-4 shadow-soft space-y-3">
+        <div class="relative w-full">
+          <i data-lucide="search" class="w-5 h-5 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Search anything... (e.g., passport, drill, chabi, dawai)"
+            class="w-full pl-11 pr-24 py-3 bg-stone-50 border border-stone-200 rounded-xl text-sm sm:text-base font-semibold text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-stone-400"
+          />
+          <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            <button
+              id="btn-clear-search"
+              onclick="clearSearchInput()"
+              style="display: none;"
+              class="p-1.5 text-stone-400 hover:text-stone-600 rounded-lg hover:bg-stone-100"
+              title="Clear search"
+            >
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+            <button
+              onclick="startQuickVoiceFromHeader()"
+              class="p-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg transition-colors cursor-pointer"
+              title="Speak to add or find"
+            >
+              <i data-lucide="mic" class="w-4 h-4 text-amber-700"></i>
+            </button>
           </div>
         </div>
 
-        <!-- Item Cards Grid Container -->
-        <section id="main-content-view" class="min-h-[200px] w-full max-w-full flex flex-col items-center justify-center">
-          <!-- Rendered dynamically by app.js -->
-        </section>
-      </div>
-
-      <!-- ================= PAGE 2: EFFORTLESS ADD / CAPTURE VIEW ================= -->
-      <div id="view-add" class="page-view w-full space-y-4 flex flex-col items-center hidden">
-        <div class="w-full bg-white/95 backdrop-blur-sm border border-stone-200 rounded-3xl p-5 sm:p-6 shadow-soft space-y-5 text-center flex flex-col items-center">
-          
-          <div class="w-full flex items-center justify-between gap-2 border-b border-stone-200/80 pb-3">
-            <div class="space-y-0.5 text-left">
-              <h2 id="add-view-title" class="text-lg sm:text-2xl font-extrabold text-stone-900 tracking-tight">
-                Add to Physical Memory
-              </h2>
-              <p class="text-xs text-stone-500">
-                Capture image, enter by voice, or fill the form &mdash; all open at once
-              </p>
-            </div>
-            <button
-              type="button"
-              id="btn-header-discard-entry"
-              onclick="discardAllAddEntries()"
-              class="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-xl text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 shadow-xs touch-manipulation"
-              title="Discard this entry and close form"
-            >
-              <i data-lucide="x" class="w-4 h-4 text-rose-600"></i>
-              <span>Discard Entry</span>
+        <!-- Filter Chips & Dropdowns -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-stone-100 text-xs">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button id="filter-btn-all" onclick="resetAllFilters()" class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer bg-stone-900 text-white shadow-xs">
+              All (<span id="stat-total-items">0</span>)
+            </button>
+            <button id="filter-btn-missing" onclick="toggleMissingFilter()" class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-red-50 flex items-center gap-1.5">
+              <span class="missing-label-text">🚩 Missing</span>
+              <span id="badge-missing-count" class="hidden px-1.5 py-0.2 bg-red-600 text-white font-extrabold rounded-full text-[10px]">0</span>
+            </button>
+            <button id="filter-btn-lent" onclick="toggleLentFilter()" class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-rose-50 flex items-center gap-1.5">
+              <span>🤝 Lent</span>
+              <span id="badge-lent-count" class="hidden px-1.5 py-0.2 bg-rose-500 text-white font-bold rounded-full text-[10px]">0</span>
+            </button>
+            <button id="filter-btn-low" onclick="toggleLowStockFilter()" class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-amber-50 flex items-center gap-1.5">
+              <span>📉 Low Stock</span>
+              <span id="badge-low-count" class="hidden px-1.5 py-0.2 bg-amber-500 text-stone-950 font-bold rounded-full text-[10px]">0</span>
+            </button>
+            <button id="btn-active-reset" onclick="resetAllFilters()" class="hidden px-2 py-1 text-xs text-rose-600 hover:underline font-bold">
+              Clear Filters
             </button>
           </div>
 
-          <!-- Top Capture Actions: Voice & Image -->
-          <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            <!-- OPTION 1: VOICE -->
-            <div class="bg-gradient-to-br from-amber-50/80 via-yellow-50/60 to-orange-50/40 p-4 sm:p-5 rounded-2xl border-2 border-amber-300/80 shadow-xs flex flex-col items-center justify-between text-center space-y-3">
-              <div class="w-full flex items-center justify-between">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300 text-[11px] font-extrabold">
-                  <i data-lucide="mic" class="w-3.5 h-3.5 text-amber-700"></i>
-                  <span>Enter by Voice</span>
-                </span>
-                <span class="text-[11px] text-amber-900 font-bold">Auto-fills form below</span>
-              </div>
+          <div class="flex items-center gap-1.5 ml-auto">
+            <select id="filter-type-select" onchange="handleTypeFilterChange(this.value)" class="bg-stone-50 border border-stone-200 text-xs font-semibold rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400">
+              <option value="All">All Types</option>
+            </select>
+            <select id="filter-location-select" onchange="handleLocationFilterChange(this.value)" class="bg-stone-50 border border-stone-200 text-xs font-semibold rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400">
+              <option value="All">All Locations</option>
+            </select>
+            <select id="sort-order-select" onchange="handleSortOrderChange(this.value)" class="bg-stone-50 border border-stone-200 text-xs font-semibold rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400">
+              <option value="recent">Recent</option>
+              <option value="name-asc">A to Z</option>
+              <option value="name-desc">Z to A</option>
+              <option value="room-asc">Room</option>
+              <option value="category">Category</option>
+              <option value="verified">Verification</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
-              <div class="flex flex-col items-center justify-center gap-2 py-1">
-                <button
-                  type="button"
-                  id="btn-voice-record"
-                  onclick="toggleVoiceRecognition()"
-                  class="w-16 h-16 sm:w-18 sm:h-18 rounded-3xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 text-stone-950 flex items-center justify-center shadow-elevated border-4 border-white cursor-pointer hover:opacity-90 active:scale-95 transition-all touch-manipulation"
-                  title="Tap to speak item and location"
-                >
-                  <i data-lucide="mic" class="w-8 h-8 text-stone-950"></i>
-                </button>
-                <span id="voice-record-label" class="text-xs font-black text-stone-800">
-                  Tap microphone to speak
-                </span>
-                <p class="text-[11px] text-stone-500 max-w-xs leading-tight">
-                  e.g. <em>&ldquo;Cordless drill in garage on workbench&rdquo;</em>
-                </p>
-              </div>
+      <!-- View Switcher Tabs (Grid vs Rooms vs Lending) -->
+      <div class="w-full flex items-center justify-center p-1 bg-stone-200/70 rounded-2xl max-w-sm mx-auto shadow-inner text-xs sm:text-sm">
+        <button id="view-tab-grid" onclick="setViewMode('grid')" class="flex-1 py-1.5 font-bold rounded-xl transition-all cursor-pointer text-center bg-white text-stone-900 shadow-soft">
+          All Items
+        </button>
+        <button id="view-tab-rooms" onclick="setViewMode('rooms')" class="flex-1 py-1.5 font-semibold rounded-xl transition-all cursor-pointer text-center text-stone-600 hover:text-stone-900">
+          Rooms
+        </button>
+        <button id="view-tab-lending" onclick="setViewMode('lending')" class="flex-1 py-1.5 font-semibold rounded-xl transition-all cursor-pointer text-center text-stone-600 hover:text-stone-900">
+          Lent Items
+        </button>
+      </div>
 
-              <div class="w-full relative flex items-center">
-                <input
-                  type="text"
-                  id="voice-nlp-input"
-                  oninput="handleNlpInputChange(this.value)"
-                  placeholder="Or type sentence to auto-fill form..."
-                  class="w-full pl-3 pr-8 py-2 bg-white border border-amber-300 focus:border-amber-500 rounded-xl text-xs font-semibold text-stone-900 text-center focus:outline-none shadow-xs"
-                />
-                <button
-                  type="button"
-                  id="btn-voice-input-clear"
-                  onclick="clearVoiceInputOnly()"
-                  class="hidden absolute right-2 p-1 text-stone-400 hover:text-stone-700 cursor-pointer"
-                  title="Clear sentence"
-                >
-                  <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                </button>
-              </div>
-            </div>
+      <!-- Content Container -->
+      <div id="main-content-view" class="w-full"></div>
+    </div>
 
-            <!-- OPTION 2: CAMERA -->
-            <div class="bg-gradient-to-br from-indigo-50/80 via-sky-50/60 to-stone-50 p-4 sm:p-5 rounded-2xl border-2 border-indigo-300/80 shadow-xs flex flex-col items-center justify-between text-center space-y-3">
-              <div class="w-full flex items-center justify-between">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-950 border border-indigo-300 text-[11px] font-extrabold">
-                  <i data-lucide="camera" class="w-3.5 h-3.5 text-indigo-700"></i>
-                  <span>Capture Image</span>
-                </span>
-                <span class="text-[11px] text-indigo-900 font-bold">Photo memory clue</span>
-              </div>
+    <!-- ================= PAGE 2: ADD / EDIT VIEW ================= -->
+    <div id="view-add" class="page-view hidden w-full max-w-xl mx-auto space-y-4">
+      <div class="bg-white rounded-3xl border border-stone-200 p-5 sm:p-6 shadow-soft space-y-5">
+        <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+          <div>
+            <h2 id="add-view-title" class="text-xl font-black text-stone-900">Add to Physical Memory</h2>
+            <p class="text-xs text-stone-500">Record an item's room and exact spot</p>
+          </div>
+          <button onclick="discardDetailedFormEntry()" class="text-stone-400 hover:text-stone-600 p-1">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
 
-              <input
-                type="file"
-                id="photo-file-input"
-                accept="image/*"
-                capture="environment"
-                onchange="handlePhotoUpload(event)"
-                class="hidden"
-              />
-
-              <label
-                for="photo-file-input"
-                class="px-4 py-4 bg-white hover:bg-stone-50 border-2 border-dashed border-indigo-300 hover:border-indigo-500 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer shadow-xs transition-all w-full select-none touch-manipulation group"
-              >
-                <div class="w-12 h-12 rounded-2xl bg-indigo-100 group-hover:bg-indigo-200 text-indigo-700 flex items-center justify-center transition-colors">
-                  <i data-lucide="camera" class="w-6 h-6"></i>
-                </div>
-                <span class="text-xs font-black text-indigo-950">Tap to Snap Photo or Choose Image</span>
-                <span class="text-[10px] text-stone-500 leading-tight">Visual memory: shelf, drawer, or box</span>
-              </label>
-
-              <div class="w-full text-center">
-                <span id="photo-status-indicator" class="text-[11px] text-stone-500 italic">
-                  Optional &bull; Attached to form once captured
-                </span>
-              </div>
-            </div>
-
+        <!-- Voice Quick NLP Autofill Bar -->
+        <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-3.5 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="mic" class="w-3.5 h-3.5 text-amber-600"></i>
+              <span>Voice / AI Autofill</span>
+            </span>
+            <span id="voice-record-label" class="text-[11px] font-bold text-amber-800">Tap microphone to speak</span>
           </div>
 
-          <!-- Live Voice Autofill Banner -->
-          <div id="voice-autofill-notice" class="hidden w-full max-w-xl bg-emerald-50 border border-emerald-300 text-emerald-950 rounded-2xl p-3 flex items-center justify-between gap-2 text-xs font-semibold shadow-xs">
-            <div class="flex items-center gap-2 text-left">
-              <span class="text-base">✨</span>
-              <span id="voice-autofill-text">Heard voice: Form fields filled below! Review or edit.</span>
-            </div>
-            <button type="button" onclick="dismissVoiceNotice()" class="text-emerald-700 hover:text-emerald-900 cursor-pointer p-1">
+          <div class="flex items-center gap-2">
+            <input
+              type="text"
+              id="voice-nlp-input"
+              oninput="handleNlpInputChange(this.value)"
+              placeholder="e.g. Put extra passport in Master Bedroom gray box"
+              class="flex-1 px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+            <button
+              type="button"
+              id="btn-voice-input-clear"
+              onclick="clearVoiceInputOnly()"
+              class="hidden p-2 text-stone-400 hover:text-stone-600"
+              title="Clear voice text"
+            >
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+            <button
+              type="button"
+              id="btn-voice-record"
+              onclick="toggleVoiceRecognition()"
+              class="p-2.5 bg-amber-400 hover:bg-amber-500 text-stone-950 font-black rounded-xl transition-all cursor-pointer shadow-xs shrink-0"
+              title="Record voice"
+            >
+              <i data-lucide="mic" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <div id="voice-autofill-notice" class="hidden bg-white/90 border border-amber-300 rounded-xl p-2 text-xs text-stone-700 flex items-center justify-between">
+            <span id="voice-autofill-text">Form filled! Review below.</span>
+            <button type="button" onclick="dismissVoiceNotice()" class="text-stone-400 hover:text-stone-700 ml-2">
               <i data-lucide="x" class="w-3.5 h-3.5"></i>
             </button>
           </div>
-
-          <!-- OPTION 3: SIMPLIFIED DETAILED FORM (2 Location Fields & Enhanced Fonts) -->
-          <div id="add-panel-form" class="w-full space-y-4 flex flex-col items-center">
-            <form id="full-add-form" onsubmit="handleSaveItemSubmit(event)" class="w-full max-w-xl space-y-4 text-xs text-center">
-              
-              <!-- Captured Image Preview -->
-              <div id="photo-preview-container" class="hidden w-full bg-indigo-50/70 border-2 border-indigo-300 rounded-2xl p-3.5 space-y-2 flex flex-col items-center shadow-soft">
-                <div class="w-full flex items-center justify-between text-xs font-bold text-indigo-950">
-                  <span class="flex items-center gap-1.5">
-                    <i data-lucide="image" class="w-4 h-4 text-indigo-600"></i>
-                    <span>Attached Image Preview</span>
-                  </span>
-                  <button
-                    type="button"
-                    onclick="clearPhotoPreview()"
-                    class="text-xs text-rose-700 bg-white hover:bg-rose-50 border border-rose-300 px-2.5 py-1 rounded-xl cursor-pointer font-bold flex items-center gap-1 transition-colors"
-                  >
-                    <i data-lucide="trash-2" class="w-3 h-3 text-rose-600"></i>
-                    <span>Remove Photo</span>
-                  </button>
-                </div>
-                <div class="relative w-full max-w-xs rounded-xl overflow-hidden border border-indigo-200 shadow-xs">
-                  <img id="photo-preview-img" src="" alt="Captured Clue" class="w-full h-44 object-cover" />
-                </div>
-              </div>
-
-              <!-- Form Header / Label -->
-              <div class="w-full flex items-center justify-between border-b border-stone-200 pb-2">
-                <span class="text-xs font-extrabold text-stone-800 flex items-center gap-1.5">
-                  <i data-lucide="file-text" class="w-4 h-4 text-stone-600"></i>
-                  <span>Item Details</span>
-                </span>
-                <span class="text-[11px] text-stone-500">* Required fields</span>
-              </div>
-
-              <!-- Item Name -->
-              <div class="space-y-1.5 text-center">
-                <label class="block font-extrabold text-stone-900 text-base sm:text-lg">Item Name *</label>
-                <input
-                  type="text"
-                  id="add-item-name"
-                  required
-                  placeholder="e.g. Cordless Drill, Extra Car Keys, Passports"
-                  class="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-base font-bold text-stone-900 text-center focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-              </div>
-
-              <!-- Category -->
-              <div class="space-y-1.5 text-center">
-                <label class="block font-bold text-stone-800 text-sm">Category / Type</label>
-                <select
-                  id="add-item-category"
-                  class="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-sm font-semibold text-stone-900 text-center focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
-                ></select>
-              </div>
-
-              <!-- Storage Location (2 Fields: Room & Location) -->
-              <div class="p-4 bg-amber-50/70 border-2 border-amber-200/90 rounded-2xl space-y-3.5 text-left">
-                <div class="font-extrabold text-amber-950 text-sm sm:text-base flex items-center justify-center sm:justify-start gap-2">
-                  <i data-lucide="map-pin" class="w-4 h-4 text-amber-600 shrink-0"></i>
-                  <span>Where is it stored?</span>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div>
-                    <label class="block text-stone-800 mb-1.5 font-bold text-sm">Room *</label>
-                    <select
-                      id="add-item-room"
-                      class="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-sm font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
-                    ></select>
-                  </div>
-                  <div>
-                    <label class="block text-stone-800 mb-1.5 font-bold text-sm">Location / Shelf / Box *</label>
-                    <input
-                      type="text"
-                      id="add-item-location-desc"
-                      required
-                      placeholder="e.g. Closet top shelf in gray box, Behind winter coats"
-                      class="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-sm font-medium text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Notes -->
-              <div class="space-y-1 text-center">
-                <label class="block font-bold text-stone-800 text-sm">Notes &amp; Description</label>
-                <input
-                  type="text"
-                  id="add-item-desc"
-                  placeholder="e.g. Includes charger, key codes, or extra bits"
-                  class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-sm text-stone-900 focus:bg-white text-center"
-                />
-              </div>
-
-              <!-- Tags & Memory Keywords -->
-              <div class="p-4 bg-stone-50 border border-stone-200/80 rounded-2xl space-y-2 text-center">
-                <label class="block text-xs font-bold text-stone-700">Keywords &amp; Memory Tags</label>
-                <input
-                  type="text"
-                  id="add-item-tags"
-                  placeholder="e.g. wire, chabi, emergency, travel, tools (comma separated)"
-                  class="w-full px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 text-center"
-                />
-              </div>
-
-              <!-- Quantity Tracking -->
-              <div class="p-4 bg-emerald-50/50 border border-emerald-200/80 rounded-2xl space-y-3">
-                <label class="flex items-center justify-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-xl border border-emerald-200 font-semibold text-stone-800 text-center">
-                  <input type="checkbox" id="add-item-consumable-toggle" onchange="toggleConsumableInputs()" class="rounded border-stone-300 text-stone-900 shrink-0" />
-                  <span>Track quantity (e.g. batteries, filters, bulbs)</span>
-                </label>
-                <div id="consumable-fields" class="hidden grid-cols-3 gap-2 bg-white p-3 rounded-xl border border-emerald-200 text-center">
-                  <div>
-                    <label class="block text-[10px] text-stone-600 font-semibold mb-1">Count</label>
-                    <input type="number" id="add-item-quantity" min="0" value="1" class="w-full px-2 py-1 border border-stone-300 rounded-lg text-xs text-center font-bold" />
-                  </div>
-                  <div>
-                    <label class="block text-[10px] text-stone-600 font-semibold mb-1">Unit</label>
-                    <input type="text" id="add-item-unit" value="items" class="w-full px-2 py-1 border border-stone-300 rounded-lg text-xs text-center" />
-                  </div>
-                  <div>
-                    <label class="block text-[10px] text-stone-600 font-semibold mb-1">Alert Below</label>
-                    <input type="number" id="add-item-threshold" min="0" value="1" class="w-full px-2 py-1 border border-stone-300 rounded-lg text-xs text-center font-bold" />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Lending Status -->
-              <div class="p-4 bg-rose-50/50 border border-rose-200/80 rounded-2xl space-y-3">
-                <label class="flex items-center justify-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-xl border border-rose-200 font-semibold text-stone-800 text-center">
-                  <input type="checkbox" id="add-item-lent-toggle" onchange="toggleLentInputs()" class="rounded border-stone-300 text-stone-900 shrink-0" />
-                  <span>Currently lent out to someone</span>
-                </label>
-                <div id="lent-fields" class="hidden grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-rose-200 text-left">
-                  <div>
-                    <label class="block text-[10px] text-stone-700 font-semibold mb-1">Borrowed by</label>
-                    <input type="text" id="add-item-lent-to" placeholder="e.g. Neighbor Dave" class="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs" />
-                  </div>
-                  <div>
-                    <label class="block text-[10px] text-stone-700 font-semibold mb-1">Expected return</label>
-                    <input type="date" id="add-item-expected-return" class="w-full px-3 py-1.5 border border-stone-300 rounded-lg text-xs" />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Form Actions -->
-              <div class="w-full pt-2 flex flex-col items-center justify-center gap-2">
-                <button
-                  type="button"
-                  id="btn-discard-above-save"
-                  onclick="discardDetailedFormEntry()"
-                  class="w-full sm:w-auto px-6 py-2.5 bg-rose-50 hover:bg-rose-100 border-2 border-rose-300 rounded-xl font-bold text-rose-700 text-xs sm:text-sm cursor-pointer transition-colors flex items-center justify-center gap-2 touch-manipulation shadow-xs"
-                  title="Discard this entry and close form"
-                >
-                  <i data-lucide="trash-2" class="w-4 h-4 text-rose-600"></i>
-                  <span>Discard Entry</span>
-                </button>
-
-                <button
-                  type="submit"
-                  id="btn-save-entry"
-                  class="w-full sm:w-auto px-10 py-3 bg-stone-900 hover:bg-stone-800 text-white rounded-xl font-black text-xs sm:text-sm cursor-pointer shadow-soft transition-all touch-manipulation flex items-center justify-center gap-2"
-                >
-                  <i data-lucide="check" class="w-4 h-4 text-amber-400"></i>
-                  <span>Save Item</span>
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <!-- Collapsible Bulk Tour Mode -->
-          <div class="w-full pt-3 border-t border-stone-200">
-            <button
-              type="button"
-              onclick="toggleTourModeSection()"
-              class="text-xs text-stone-500 hover:text-stone-800 font-semibold transition-colors flex items-center justify-center gap-1.5 mx-auto cursor-pointer"
-            >
-              <span>🚶 Walking through a room? Open Bulk Tour Mode (10+ items)</span>
-              <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
-            </button>
-
-            <div id="add-panel-tour" class="w-full space-y-4 flex flex-col items-center hidden mt-3">
-              <div class="w-full bg-gradient-to-br from-emerald-50/70 via-teal-50/50 to-stone-50 p-5 rounded-2xl border border-emerald-200/80 space-y-4 text-center">
-                <div class="space-y-1">
-                  <h3 class="text-sm sm:text-base font-extrabold text-emerald-950">Bulk &ldquo;Tour Mode&rdquo;</h3>
-                  <p class="text-xs text-stone-600 max-w-md mx-auto">
-                    Walk through a room, say or type everything inside out loud.
-                  </p>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md mx-auto text-left">
-                  <div>
-                    <label class="block text-[11px] font-bold text-stone-700 mb-1">Walking In Room *</label>
-                    <select
-                      id="tour-room-select"
-                      class="w-full px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs font-semibold text-stone-800"
-                    ></select>
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-bold text-stone-700 mb-1">Drawer, Shelf or Spot *</label>
-                    <input
-                      type="text"
-                      id="tour-zone-input"
-                      placeholder="e.g. Middle drawer, Pegboard, Top shelf"
-                      class="w-full px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs text-stone-900"
-                    />
-                  </div>
-                </div>
-
-                <div class="w-full max-w-md mx-auto space-y-2 text-center">
-                  <div class="flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      id="btn-tour-voice"
-                      onclick="toggleTourVoice()"
-                      class="px-4 py-2 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 text-emerald-950 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
-                    >
-                      <span>🎙️</span>
-                      <span id="tour-voice-label">Speak items</span>
-                    </button>
-                    <span class="text-[11px] text-stone-500">or type separated by commas:</span>
-                  </div>
-
-                  <textarea
-                    id="tour-items-input"
-                    rows="2"
-                    oninput="handleTourInputChange(this.value)"
-                    placeholder="e.g. Hammer, screwdriver, wire cutters, tape measure"
-                    class="w-full px-3.5 py-2.5 bg-white border-2 border-emerald-300 focus:border-emerald-500 rounded-2xl text-xs text-stone-900 focus:outline-none shadow-xs text-center"
-                  ></textarea>
-                </div>
-
-                <div id="tour-preview-badges" class="flex flex-wrap items-center justify-center gap-1.5 max-w-md mx-auto"></div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-md mx-auto w-full pt-1">
-                  <button
-                    type="button"
-                    onclick="discardDetailedFormEntry()"
-                    class="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 touch-manipulation"
-                    title="Discard entry and close"
-                  >
-                    <i data-lucide="trash-2" class="w-4 h-4 text-rose-600"></i>
-                    <span>Discard Entry</span>
-                  </button>
-                  <button
-                    type="button"
-                    id="btn-save-tour-bulk"
-                    onclick="saveBulkTourItems()"
-                    class="w-full py-2.5 bg-stone-900 hover:bg-stone-800 text-white font-extrabold text-xs rounded-xl shadow-soft transition-all cursor-pointer flex items-center justify-center gap-1.5 touch-manipulation"
-                  >
-                    <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
-                    <span id="btn-save-tour-label">Add Items in Tour</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
-      </div>
 
-      <!-- ================= PAGE 3: STREAK & RETENTION LOGIC VIEW ================= -->
-      <div id="view-streak" class="page-view w-full space-y-4 flex flex-col items-center hidden">
-        <div class="w-full bg-white/95 backdrop-blur-sm border border-stone-200 rounded-3xl p-5 sm:p-6 shadow-soft space-y-5 text-center flex flex-col items-center">
-          
-          <div class="space-y-1 text-center">
-            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-950 border border-amber-300 text-xs font-bold shadow-xs">
-              <span>🔥 Daily Habit Engine</span>
-            </div>
-            <h2 class="text-xl sm:text-2xl font-extrabold text-stone-900 tracking-tight">
-              Organizing Habit &amp; Retention Logic
-            </h2>
-            <p class="text-xs sm:text-sm text-stone-500 max-w-md mx-auto">
-              Why do we have a streak? Here is the cognitive science behind WhereAbouts.
-            </p>
+        <!-- Detailed Form (2-Field Location: Room & Spot) -->
+        <form id="full-add-form" onsubmit="handleSaveItemSubmit(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-stone-800 mb-1">Item Name *</label>
+            <input type="text" id="add-item-name" required placeholder="e.g., Cordless Drill &amp; Bit Kit" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-bold text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
           </div>
 
-          <div class="w-full bg-amber-50/70 border border-amber-200/90 rounded-2xl p-4 sm:p-5 text-left space-y-2.5 text-xs text-stone-700 leading-relaxed">
-            <div class="flex items-center gap-2 font-black text-amber-950 text-sm">
-              <i data-lucide="brain" class="w-4 h-4 text-amber-600 shrink-0"></i>
-              <span>The 14-Day Physical Memory Retention Curve</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-stone-800 mb-1">Room / Space *</label>
+              <select id="add-item-room" required class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-semibold text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"></select>
             </div>
-            <p>
-              Human brains naturally discard spatial location memory within <strong>14 to 21 days</strong> when an item isn&rsquo;t actively seen or used.
-            </p>
-            <p>
-              Opening WhereAbouts for just <strong>10 seconds a day</strong> keeps your entire home inventory fresh in active memory.
-            </p>
-          </div>
-
-          <div class="flex flex-wrap items-center justify-center gap-3 w-full">
-            <div class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 px-5 py-2.5 rounded-2xl text-sm font-extrabold text-amber-950 shadow-xs">
-              <span class="text-xl">🔥</span>
-              <span id="streak-counter-badge">3-Day Organizing Streak</span>
-            </div>
-            <div class="inline-flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-300 px-5 py-2.5 rounded-2xl text-sm font-extrabold text-emerald-950 shadow-xs">
-              <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
-              <span id="health-score-badge">Home Clarity: 100%</span>
+            <div>
+              <label class="block text-xs font-bold text-stone-800 mb-1">Category</label>
+              <select id="add-item-category" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-semibold text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"></select>
             </div>
           </div>
 
-          <div class="w-full max-w-sm flex flex-col items-center gap-3">
-            <button
-              id="btn-daily-checkin"
-              onclick="handleDailyCheckIn()"
-              class="w-full py-3 bg-amber-400 hover:bg-amber-500 text-stone-950 font-extrabold text-sm rounded-xl transition-all shadow-soft flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <span>🔥</span>
-              <span>Check In Today (+1 Streak)</span>
+          <div>
+            <label class="block text-xs font-bold text-stone-800 mb-1">Location / Spot (Shelf, Drawer, Box) *</label>
+            <input type="text" id="add-item-location-desc" required placeholder="e.g. Closet top shelf in gray fireproof box" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-800 mb-1">Description &amp; Context Notes</label>
+            <textarea id="add-item-desc" rows="2" placeholder="Optional notes, accessories, or condition..." class="w-full px-3.5 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-800 mb-1">Keywords / Search Tags</label>
+            <input type="text" id="add-item-tags" placeholder="e.g. tools, screws, hardware, drill, auzar" class="w-full px-3.5 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          </div>
+
+          <!-- Photo Clue Upload Container -->
+          <div class="border-t border-stone-100 pt-3 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                <i data-lucide="camera" class="w-3.5 h-3.5 text-stone-500"></i>
+                <span>Visual Photo Clue</span>
+              </span>
+              <span id="photo-status-indicator" class="text-xs text-stone-400 italic">Optional</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <label for="photo-file-input" class="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 border border-stone-300 rounded-xl text-xs font-bold text-stone-700 cursor-pointer flex items-center gap-1.5">
+                <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                <span>Attach Photo</span>
+              </label>
+              <input type="file" id="photo-file-input" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" class="hidden" />
+              <button type="button" onclick="clearPhotoPreview()" class="text-xs text-stone-400 hover:text-stone-600 underline">Clear</button>
+            </div>
+
+            <div id="photo-preview-container" class="hidden w-32 h-24 rounded-xl overflow-hidden border border-stone-200 relative">
+              <img id="photo-preview-img" src="" alt="Photo Clue Preview" class="w-full h-full object-cover" />
+            </div>
+          </div>
+
+          <!-- Consumable / Stock Section -->
+          <div class="border-t border-stone-100 pt-3 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-stone-800 flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="add-item-consumable-toggle" onchange="toggleConsumableInputs()" class="rounded border-stone-300 text-amber-500 focus:ring-amber-400" />
+                <span>Track stock quantity &amp; low supplies</span>
+              </label>
+            </div>
+
+            <div id="consumable-fields" class="hidden grid-cols-3 gap-2 pt-1">
+              <div>
+                <label class="block text-[10px] font-bold text-stone-600 mb-0.5">Quantity</label>
+                <input type="number" id="add-item-quantity" value="1" min="0" class="w-full px-2.5 py-1.5 bg-stone-50 border border-stone-300 rounded-xl text-xs" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-stone-600 mb-0.5">Unit</label>
+                <input type="text" id="add-item-unit" value="items" class="w-full px-2.5 py-1.5 bg-stone-50 border border-stone-300 rounded-xl text-xs" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-stone-600 mb-0.5">Alert Level</label>
+                <input type="number" id="add-item-threshold" value="1" min="0" class="w-full px-2.5 py-1.5 bg-stone-50 border border-stone-300 rounded-xl text-xs" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Lending Section -->
+          <div class="border-t border-stone-100 pt-3 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-stone-800 flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="add-item-lent-toggle" onchange="toggleLentInputs()" class="rounded border-stone-300 text-rose-500 focus:ring-rose-400" />
+                <span>Currently lent out to someone</span>
+              </label>
+            </div>
+
+            <div id="lent-fields" class="hidden grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <div>
+                <label class="block text-[10px] font-bold text-stone-600 mb-0.5">Borrower Name</label>
+                <input type="text" id="add-item-lent-to" placeholder="e.g. Dave (Neighbor)" class="w-full px-2.5 py-1.5 bg-stone-50 border border-stone-300 rounded-xl text-xs" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-stone-600 mb-0.5">Expected Return Date</label>
+                <input type="date" id="add-item-expected-return" class="w-full px-2.5 py-1.5 bg-stone-50 border border-stone-300 rounded-xl text-xs" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="pt-4 flex items-center gap-2">
+            <button type="button" onclick="discardDetailedFormEntry()" class="w-1/3 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl cursor-pointer">
+              Cancel
             </button>
+            <button type="submit" class="flex-1 py-3 bg-stone-900 hover:bg-stone-800 text-white font-black text-sm rounded-xl shadow-soft cursor-pointer">
+              Save Item
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
-            <button
-              id="btn-enable-notifications"
-              onclick="toggleDailyNotifications()"
-              class="w-full py-2.5 bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-300 font-semibold text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <i data-lucide="bell" class="w-4 h-4 text-sky-600"></i>
+    <!-- ================= PAGE 3: STREAK & HABITS VIEW ================= -->
+    <div id="view-streak" class="page-view hidden w-full max-w-lg mx-auto space-y-4">
+      <div class="bg-white rounded-3xl border border-stone-200 p-6 shadow-soft space-y-5 text-center flex flex-col items-center">
+        <div class="w-16 h-16 rounded-3xl bg-amber-100 flex items-center justify-center text-3xl shadow-xs mx-auto">
+          🔥
+        </div>
+
+        <div class="space-y-1">
+          <h2 class="text-2xl font-black text-stone-900">Organizing Routine</h2>
+          <p class="text-xs text-stone-500 max-w-xs mx-auto">Build a daily mental map so items never go missing.</p>
+        </div>
+
+        <!-- Badges & Score -->
+        <div class="grid grid-cols-2 gap-3 w-full max-w-sm">
+          <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl">
+            <span id="streak-counter-badge" class="text-sm font-black text-amber-950 block">3-Day Streak</span>
+            <span class="text-[10px] text-amber-800 font-bold">Daily Check-Ins</span>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl">
+            <span id="health-score-badge" class="text-sm font-black text-emerald-950 block">Home Clarity: 85%</span>
+            <span class="text-[10px] text-emerald-800 font-bold">Verified Storage</span>
+          </div>
+        </div>
+
+        <!-- Check-in Trigger Button -->
+        <div class="w-full max-w-xs pt-1">
+          <button id="btn-daily-checkin" onclick="handleDailyCheckIn()" class="w-full py-3 bg-amber-400 hover:bg-amber-500 text-stone-950 font-black text-sm rounded-xl transition-all shadow-soft flex items-center justify-center gap-2 cursor-pointer">
+            <span>🔥</span>
+            <span>Daily Check-In (+1 Streak)</span>
+          </button>
+        </div>
+
+        <!-- Daily Notifications Section -->
+        <div class="w-full border-t border-stone-100 pt-4 space-y-3">
+          <div class="text-left space-y-1">
+            <span class="text-xs font-bold text-stone-800 block">Gentle Reminders</span>
+            <p id="notif-status-note" class="text-xs text-stone-500">Turn on notifications to receive friendly nudges when lent items are due or for a quick spot check.</p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="toggleDailyNotifications()" class="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs rounded-xl transition-colors cursor-pointer">
               <span id="notif-button-label">Enable Daily Reminders</span>
             </button>
-
-            <button
-              id="btn-test-notification"
-              onclick="sendTestNotification()"
-              class="hidden px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-medium rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
-            >
-              <i data-lucide="send" class="w-3.5 h-3.5"></i>
-              <span>Send Test Alert</span>
-            </button>
-          </div>
-
-          <p id="notif-status-note" class="text-[11px] text-stone-500 text-center max-w-sm">
-            🔔 Reminders gently nudge you when lent items are due or for a quick spot check.
-          </p>
-        </div>
-      </div>
-
-      <!-- ================= PAGE 4: SPOT CHECK VIEW ================= -->
-      <div id="view-spotcheck" class="page-view w-full space-y-4 flex flex-col items-center hidden">
-        <div class="w-full bg-white/95 backdrop-blur-sm border border-stone-200 rounded-3xl p-5 sm:p-6 shadow-soft space-y-5 text-center flex flex-col items-center">
-          
-          <div class="space-y-1 text-center">
-            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-950 border border-amber-300 text-xs font-bold shadow-xs">
-              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
-              <span>15-Second Memory Flashcard</span>
-            </div>
-            <h2 class="text-xl sm:text-2xl font-extrabold text-stone-900 tracking-tight">
-              Casual Spot Check
-            </h2>
-            <p class="text-xs sm:text-sm text-stone-500 max-w-sm mx-auto">
-              A quick mental flashcard to confirm your item is right where you expect it!
-            </p>
-          </div>
-
-          <div id="spot-check-body" class="w-full max-w-md mx-auto flex flex-col items-center justify-center">
-            <!-- Populated dynamically by app.js -->
-          </div>
-        </div>
-      </div>
-
-      <!-- ================= PAGE 5: ABOUT US & LEGAL WAIVER VIEW ================= -->
-      <div id="view-about" class="page-view w-full space-y-4 flex flex-col items-center hidden">
-        <div class="w-full bg-white/95 backdrop-blur-sm border border-stone-200 rounded-3xl p-5 sm:p-6 shadow-soft space-y-5 text-center flex flex-col items-center">
-          
-          <div class="flex flex-col items-center justify-center text-center">
-            <img src="./apple-touch-icon.png" alt="WhereAbouts Icon" class="w-14 h-14 rounded-2xl object-contain shadow-soft mb-2" />
-            <h2 class="text-xl sm:text-2xl font-extrabold text-stone-900 tracking-tight leading-none">About WhereAbouts</h2>
-            <span class="text-xs text-amber-800 font-bold bg-amber-100/90 px-3 py-0.5 rounded-full border border-amber-300 mt-1.5">
-              Version 1.0 &bull; Vanilla PWA
-            </span>
-          </div>
-
-          <div class="w-full max-w-xl bg-gradient-to-br from-stone-50 to-amber-50/40 p-4 rounded-2xl border border-stone-200/90 space-y-2 text-center">
-            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-stone-900 text-white text-xs font-bold shadow-xs">
-              <span>Crafted by Opal Luna Labs</span>
-            </div>
-            <p class="text-xs sm:text-sm text-stone-700 leading-relaxed font-medium">
-              <strong>WhereAbouts</strong> is an everyday physical memory engine and household organizer designed to help you instantly recall where you stored tools, keys, spare parts, travel documents, and lent items.
-            </p>
-          </div>
-
-          <div class="w-full max-w-xl bg-red-50/50 border-2 border-red-200 rounded-2xl p-4 sm:p-5 space-y-3 text-left">
-            <div class="flex items-center justify-center sm:justify-start gap-2 text-red-950 font-extrabold text-xs sm:text-sm border-b border-red-200/80 pb-2">
-              <i data-lucide="shield-alert" class="w-4 h-4 text-red-600 shrink-0"></i>
-              <span>LEGAL DISCLAIMER &amp; LIMITATION OF LIABILITY</span>
-            </div>
-
-            <div class="space-y-2 text-[11px] sm:text-xs text-stone-700 leading-relaxed">
-              <p class="font-bold text-red-900">
-                1. NO LEGAL LIABILITIES WHATSOEVER
-              </p>
-              <p>
-                This application (&ldquo;WhereAbouts&rdquo;) and all associated software, features, tools, and materials are created and provided by <strong>Opal Luna Labs</strong> and the application developer strictly on an <strong>&ldquo;AS IS&rdquo;</strong> and <strong>&ldquo;AS AVAILABLE&rdquo;</strong> basis.
-              </p>
-
-              <p class="font-bold text-red-900 pt-1">
-                2. USER EXCLUSIVE RESPONSIBILITY
-              </p>
-              <p>
-                The user assumes 100% full, sole, and exclusive responsibility for physically inspecting, securing, handling, and storing their own belongings. WhereAbouts serves merely as a memory helper.
-              </p>
-            </div>
-          </div>
-
-          <div class="w-full max-w-xl flex flex-wrap items-center justify-between gap-2 p-3 bg-stone-50 border border-stone-200 rounded-2xl text-xs text-stone-600">
-            <span class="text-left font-medium">Need a fresh start?</span>
-            <button
-              onclick="resetData()"
-              class="px-3 py-1.5 text-stone-500 hover:text-stone-800 hover:bg-stone-200 rounded-xl transition-colors cursor-pointer flex items-center gap-1 font-semibold"
-              title="Reset to starter demo items"
-            >
-              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-              <span>Reset Demo Data</span>
+            <button id="btn-test-notification" onclick="sendTestNotification()" class="hidden px-3 py-2.5 bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-700 font-bold text-xs rounded-xl cursor-pointer">
+              Test
             </button>
           </div>
         </div>
       </div>
-    </main>
+    </div>
 
-    <!-- FIXED BOTTOM BAR -->
-    <nav id="bottom-bar" class="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-stone-200/90 shadow-elevated" style="padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));">
-      <div class="max-w-md mx-auto px-1 py-1 flex items-center justify-between gap-0.5 w-full">
-        
-        <button
-          type="button"
-          id="nav-btn-home"
-          onclick="switchPage('home')"
-          class="nav-tab-btn active flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1 px-0.5 rounded-xl transition-all cursor-pointer text-amber-600 font-extrabold bg-amber-50/90 shadow-xs ring-1 ring-amber-300 min-h-[48px] select-none touch-manipulation"
-          title="Home - Items & Search"
-        >
-          <i data-lucide="home" class="w-4 h-4 sm:w-5 sm:h-5 pointer-events-none"></i>
-          <span class="text-[10px] sm:text-xs pointer-events-none truncate max-w-full text-center">Home</span>
-        </button>
-
-        <button
-          type="button"
-          id="nav-btn-add"
-          onclick="switchPage('add')"
-          class="nav-tab-btn flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 px-0.5 py-0.5 cursor-pointer transform hover:scale-105 active:scale-95 transition-all min-h-[48px] select-none touch-manipulation"
-          title="Log Location"
-        >
-          <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 text-stone-950 flex items-center justify-center shadow-elevated border-2 border-white ring-2 ring-amber-400/40 pointer-events-none">
-            <i data-lucide="plus" class="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]"></i>
+    <!-- ================= PAGE 4: SPOT CHECK VIEW ================= -->
+    <div id="view-spotcheck" class="page-view hidden w-full max-w-md mx-auto space-y-4">
+      <div class="bg-white rounded-3xl border border-stone-200 p-6 shadow-soft space-y-4 text-center flex flex-col items-center">
+        <div class="flex items-center justify-between w-full border-b border-stone-100 pb-2">
+          <div class="flex items-center gap-2 text-left">
+            <span class="text-xl">📍</span>
+            <div>
+              <h3 class="text-base font-black text-stone-900 leading-tight">15-Second Spot Check</h3>
+              <p class="text-[11px] text-stone-500">Quick flashcard habit to test memory</p>
+            </div>
           </div>
-          <span class="text-[10px] sm:text-xs font-black text-amber-950 pointer-events-none truncate max-w-full text-center">Add</span>
-        </button>
-
-        <button
-          type="button"
-          id="nav-btn-streak"
-          onclick="switchPage('streak')"
-          class="nav-tab-btn flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1 px-0.5 rounded-xl transition-all cursor-pointer text-stone-500 hover:text-stone-900 font-medium min-h-[48px] select-none touch-manipulation"
-          title="Daily Habit & Memory Logic"
-        >
-          <i data-lucide="flame" class="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 pointer-events-none"></i>
-          <span class="text-[10px] sm:text-xs pointer-events-none truncate max-w-full text-center">Streak</span>
-        </button>
-
-        <button
-          type="button"
-          id="nav-btn-spotcheck"
-          onclick="switchPage('spotcheck')"
-          class="nav-tab-btn flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1 px-0.5 rounded-xl transition-all cursor-pointer text-stone-500 hover:text-stone-900 font-medium min-h-[48px] select-none touch-manipulation"
-          title="Memory Spot Check"
-        >
-          <i data-lucide="sparkles" class="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 pointer-events-none"></i>
-          <span class="text-[10px] sm:text-xs pointer-events-none truncate max-w-full text-center">Spot</span>
-        </button>
-
-        <button
-          type="button"
-          id="nav-btn-about"
-          onclick="switchPage('about')"
-          class="nav-tab-btn flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1 px-0.5 rounded-xl transition-all cursor-pointer text-stone-500 hover:text-indigo-900 font-medium min-h-[48px] select-none touch-manipulation"
-          title="About Us"
-        >
-          <i data-lucide="info" class="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 pointer-events-none"></i>
-          <span class="text-[10px] sm:text-xs pointer-events-none truncate max-w-full text-center">About</span>
-        </button>
-
-      </div>
-    </nav>
-
-    <!-- One-Tap "Not There!" Self-Healing Modal -->
-    <div id="not-there-modal" class="hidden fixed inset-0 z-[85] bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div class="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-elevated border border-stone-200 space-y-4 text-center">
-        <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-900 mx-auto flex items-center justify-center">
-          <i data-lucide="help-circle" class="w-6 h-6 text-amber-600"></i>
+          <button onclick="switchPage('home')" class="text-stone-400 hover:text-stone-600 p-1">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
         </div>
-        
+
+        <!-- Spot check dynamic body -->
+        <div id="spot-check-body" class="w-full pt-1"></div>
+      </div>
+    </div>
+
+    <!-- ================= PAGE 5: ABOUT & ACCOUNT VIEW ================= -->
+    <div id="view-about" class="page-view hidden w-full max-w-lg mx-auto space-y-4">
+      <div class="bg-white rounded-3xl border border-stone-200 p-6 shadow-soft space-y-5 text-center flex flex-col items-center">
+        <img src="./apple-touch-icon.png" alt="WhereAbouts Logo" class="w-16 h-16 rounded-2xl object-contain shadow-soft" />
+
         <div class="space-y-1">
-          <h3 class="text-base font-extrabold text-stone-900" id="not-there-title">Not where it says?</h3>
-          <p class="text-xs text-stone-600" id="not-there-subtitle">
-            Was it moved, lent, or used up? Fix WhereAbouts's memory in 1 tap:
-          </p>
+          <h2 class="text-2xl font-black text-stone-900">WhereAbouts</h2>
+          <p class="text-xs text-stone-500">Know where everything is. · Version 1.0.0</p>
         </div>
 
-        <div class="grid grid-cols-1 gap-2 pt-1 text-left">
-          <button
-            type="button"
-            onclick="handleNotThereChoice('moved')"
-            class="p-3 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-2xl flex items-center gap-3 transition-colors cursor-pointer touch-manipulation text-left"
-          >
-            <div class="w-9 h-9 rounded-xl bg-amber-200 text-amber-950 flex items-center justify-center shrink-0">
-              <i data-lucide="map-pin" class="w-4 h-4 text-amber-900"></i>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-stone-900">Moved somewhere else</div>
-              <div class="text-[10px] text-stone-500">Pick new room &amp; shelf right now</div>
-            </div>
-          </button>
+        <p class="text-xs text-stone-600 max-w-xs mx-auto leading-relaxed">
+          Zero-build Progressive Web App built for mobile phones. Secure multi-device synchronization via Cloud Firestore.
+        </p>
 
-          <button
-            type="button"
-            onclick="handleNotThereChoice('lent')"
-            class="p-3 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded-2xl flex items-center gap-3 transition-colors cursor-pointer touch-manipulation text-left"
-          >
-            <div class="w-9 h-9 rounded-xl bg-rose-200 text-rose-950 flex items-center justify-center shrink-0">
-              <i data-lucide="share-2" class="w-4 h-4 text-rose-900"></i>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-stone-900">Lent to someone</div>
-              <div class="text-[10px] text-stone-500">Log who borrowed it</div>
-            </div>
+        <!-- Account Management Actions -->
+        <div class="w-full border-t border-stone-100 pt-4 space-y-2 text-center">
+          <button onclick="handleSignOut()" class="w-full py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs rounded-xl transition-colors cursor-pointer">
+            Sign Out
           </button>
-
-          <button
-            type="button"
-            onclick="handleNotThereChoice('consumed')"
-            class="p-3 bg-purple-50 hover:bg-purple-100 border border-purple-300 rounded-2xl flex items-center gap-3 transition-colors cursor-pointer touch-manipulation text-left"
-          >
-            <div class="w-9 h-9 rounded-xl bg-purple-200 text-purple-950 flex items-center justify-center shrink-0">
-              <i data-lucide="archive-restore" class="w-4 h-4 text-purple-900"></i>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-stone-900">Used up / Finished</div>
-              <div class="text-[11px] text-stone-500">Mark as empty or 0 in stock</div>
-            </div>
+          <button onclick="handleDeleteAccount()" class="w-full py-2 text-rose-600 hover:bg-rose-50 font-bold text-xs rounded-xl transition-colors cursor-pointer">
+            Delete Account &amp; Erase Cloud Data
           </button>
-
-          <button
-            type="button"
-            onclick="handleNotThereChoice('missing')"
-            class="p-3 bg-red-50 hover:bg-red-100 border-2 border-red-300 rounded-2xl flex items-center gap-3 transition-colors cursor-pointer touch-manipulation text-left"
-          >
-            <div class="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <i data-lucide="alert-triangle" class="w-4 h-4 text-white"></i>
-            </div>
-            <div>
-              <div class="text-xs font-black text-red-950">🚩 Missing &bull; Tag as Missing (Red Alert)</div>
-              <div class="text-[11px] text-red-700 font-semibold">Mark as missing in red &bull; Not verified today</div>
-            </div>
-          </button>
+          <div class="pt-2">
+            <button onclick="resetData()" class="text-[11px] text-stone-400 hover:text-stone-600 underline cursor-pointer">
+              Reset Starter Demo Items
+            </button>
+          </div>
         </div>
+      </div>
+    </div>
 
-        <button
-          type="button"
-          onclick="closeNotThereModal()"
-          class="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl cursor-pointer touch-manipulation transition-colors"
-        >
+  </main>
+
+  <!-- ================= BOTTOM NAVIGATION BAR ================= -->
+  <nav id="bottom-bar" class="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-stone-200/90 shadow-elevated">
+    <div class="max-w-md mx-auto px-2 py-1.5 flex items-center justify-around gap-1">
+      <button
+        id="nav-btn-home"
+        onclick="switchPage('home')"
+        class="nav-tab-btn active flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1 px-0.5 rounded-xl transition-all cursor-pointer text-amber-600 font-extrabold bg-amber-50/90 shadow-xs ring-1 ring-amber-300 min-h-[48px] select-none touch-manipulation"
+      >
+        <i data-lucide="home" class="w-5 h-5"></i>
+        <span class="text-[11px]">Home</span>
+      </button>
+
+      <button
+        id="nav-btn-spotcheck"
+        onclick="switchPage('spotcheck')"
+        class="nav-tab-btn flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1 px-0.5 rounded-xl transition-all cursor-pointer text-stone-500 hover:text-stone-900 font-semibold min-h-[48px] select-none touch-manipulation"
+      >
+        <i data-lucide="check-circle" class="w-5 h-5"></i>
+        <span class="text-[11px]">Check</span>
+      </button>
+
+      <!-- Center Prominent ADD Item Button -->
+      <button
+        id="nav-btn-add"
+        onclick="openQuickAddModal()"
+        class="nav-tab-btn flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 px-0.5 py-0.5 cursor-pointer transform hover:scale-105 active:scale-95 transition-all min-h-[48px] select-none touch-manipulation"
+      >
+        <div class="w-10 h-10 rounded-2xl bg-stone-900 text-amber-400 flex items-center justify-center shadow-soft">
+          <i data-lucide="plus" class="w-6 h-6 stroke-[3]"></i>
+        </div>
+        <span class="text-[10px] font-black text-stone-800">Add</span>
+      </button>
+
+      <button
+        id="nav-btn-streak"
+        onclick="switchPage('streak')"
+        class="nav-tab-btn flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1 px-0.5 rounded-xl transition-all cursor-pointer text-stone-500 hover:text-stone-900 font-semibold min-h-[48px] select-none touch-manipulation"
+      >
+        <i data-lucide="flame" class="w-5 h-5"></i>
+        <span class="text-[11px]">Streak</span>
+      </button>
+
+      <button
+        id="nav-btn-about"
+        onclick="switchPage('about')"
+        class="nav-tab-btn flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1 px-0.5 rounded-xl transition-all cursor-pointer text-stone-500 hover:text-stone-900 font-semibold min-h-[48px] select-none touch-manipulation"
+      >
+        <i data-lucide="info" class="w-5 h-5"></i>
+        <span class="text-[11px]">About</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ================= NOT THERE SELF-HEALING MODAL ================= -->
+  <div id="not-there-modal" class="hidden fixed inset-0 z-[80] bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-elevated border border-stone-200 space-y-4 text-center">
+      <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 mx-auto flex items-center justify-center">
+        <i data-lucide="help-circle" class="w-6 h-6 text-amber-600"></i>
+      </div>
+      <div class="space-y-1">
+        <h3 id="not-there-title" class="text-lg font-black text-stone-900">Not where it says?</h3>
+        <p id="not-there-subtitle" class="text-xs text-stone-500">Fix WhereAbouts’s memory in 1 tap:</p>
+      </div>
+      <div class="space-y-2 pt-1 text-xs sm:text-sm">
+        <button onclick="handleNotThereChoice('moved')" class="w-full py-2.5 px-3 bg-stone-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-soft">
+          <i data-lucide="map-pin" class="w-4 h-4 text-amber-400"></i>
+          <span>I moved it (update location)</span>
+        </button>
+        <button onclick="handleNotThereChoice('lent')" class="w-full py-2.5 px-3 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer">
+          <i data-lucide="share-2" class="w-4 h-4 text-rose-600"></i>
+          <span>Someone borrowed it (record loan)</span>
+        </button>
+        <button onclick="handleNotThereChoice('consumed')" class="w-full py-2.5 px-3 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer">
+          <i data-lucide="package-minus" class="w-4 h-4 text-amber-600"></i>
+          <span>Used up (set stock to 0)</span>
+        </button>
+        <button onclick="handleNotThereChoice('missing')" class="w-full py-2.5 px-3 bg-red-50 hover:bg-red-100 text-red-900 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer border border-red-200">
+          <i data-lucide="alert-triangle" class="w-4 h-4 text-red-600"></i>
+          <span>Flag as Missing</span>
+        </button>
+      </div>
+      <button onclick="closeNotThereModal()" class="w-full pt-1 text-xs text-stone-400 hover:text-stone-700 font-semibold cursor-pointer">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= RELOCATE SPOT MODAL ================= -->
+  <div id="relocate-modal" class="hidden fixed inset-0 z-[82] bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-elevated border border-stone-200 space-y-4 text-center">
+      <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 mx-auto flex items-center justify-center">
+        <i data-lucide="map-pin" class="w-6 h-6 text-amber-600"></i>
+      </div>
+      <h3 id="relocate-title" class="text-base sm:text-lg font-black text-stone-900">Where is it now?</h3>
+      <div class="space-y-3 text-left">
+        <div>
+          <label class="block text-xs font-bold text-stone-700 mb-1">Room</label>
+          <select id="relocate-room-select" class="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold text-stone-900 focus:bg-white focus:outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-stone-700 mb-1">Exact Spot / Container</label>
+          <input type="text" id="relocate-zone-input" placeholder="e.g. Nightstand top drawer" class="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs text-stone-900 focus:bg-white focus:outline-none" />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button onclick="closeRelocateModal()" class="py-2.5 px-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl cursor-pointer">
           Cancel
         </button>
+        <button onclick="confirmRelocateItem()" class="py-2.5 px-3 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs rounded-xl shadow-soft cursor-pointer">
+          Update Spot
+        </button>
       </div>
     </div>
+  </div>
 
-    <!-- Quick Relocate Dialog Modal -->
-    <div id="relocate-modal" class="hidden fixed inset-0 z-[86] bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div class="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-elevated border border-stone-200 space-y-4 text-center">
-        <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-900 mx-auto flex items-center justify-center">
-          <i data-lucide="map-pin" class="w-6 h-6 text-amber-600"></i>
-        </div>
-        <div class="space-y-1">
-          <h3 class="text-lg font-black text-stone-900" id="relocate-title">Where is it now?</h3>
-          <p class="text-sm text-stone-600">Update the room and location spot:</p>
-        </div>
-        <div class="space-y-3 text-left">
-          <div>
-            <label class="block text-xs font-bold text-stone-800 mb-1">New Room *</label>
-            <select id="relocate-room-select" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-semibold text-stone-900"></select>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-stone-800 mb-1">New Location Spot *</label>
-            <input type="text" id="relocate-zone-input" placeholder="e.g. Nightstand top drawer, Gray box" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm text-stone-900 font-medium" />
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-2 pt-1">
-          <button type="button" onclick="closeRelocateModal()" class="py-2.5 px-4 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-sm rounded-xl cursor-pointer touch-manipulation">Cancel</button>
-          <button type="button" onclick="confirmRelocateItem()" class="py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white font-bold text-sm rounded-xl shadow-soft cursor-pointer touch-manipulation">Save Spot</button>
-        </div>
+  <!-- ================= GENERIC CONFIRM / PROMPT DIALOG MODAL ================= -->
+  <div id="app-dialog-modal" class="hidden fixed inset-0 z-[85] bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-elevated border border-stone-200 space-y-3.5 text-center">
+      <h3 id="dialog-title" class="text-lg font-black text-stone-900">Confirm</h3>
+      <p id="dialog-message" class="text-xs sm:text-sm text-stone-600">Are you sure?</p>
+      <div id="dialog-input-container" class="hidden text-left pt-1">
+        <input type="text" id="dialog-input" class="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 focus:bg-white focus:outline-none" />
+      </div>
+      <div class="grid grid-cols-2 gap-2 pt-2">
+        <button id="dialog-btn-cancel" class="py-2.5 px-4 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs rounded-xl cursor-pointer">
+          Cancel
+        </button>
+        <button id="dialog-btn-confirm" class="py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs rounded-xl shadow-soft cursor-pointer">
+          Confirm
+        </button>
       </div>
     </div>
+  </div>
 
-    <!-- Generic In-App Dialog Modal Container -->
-    <div id="app-dialog-modal" class="hidden fixed inset-0 z-[80] bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div class="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-elevated border border-stone-200 space-y-4 text-center">
-        <div id="dialog-icon-wrapper" class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 mx-auto flex items-center justify-center">
-          <i data-lucide="alert-circle" id="dialog-icon" class="w-6 h-6"></i>
-        </div>
-        <div class="space-y-1">
-          <h3 id="dialog-title" class="text-base font-extrabold text-stone-900">Dialog Title</h3>
-          <p id="dialog-message" class="text-xs text-stone-600">Dialog message text.</p>
-        </div>
-        <div id="dialog-input-container" class="hidden text-left">
-          <input type="text" id="dialog-input" class="w-full px-3.5 py-2.5 border-2 border-stone-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm font-semibold text-stone-900 focus:outline-none" />
-        </div>
-        <div class="grid grid-cols-2 gap-2 pt-1">
-          <button type="button" id="dialog-btn-cancel" class="py-2.5 px-4 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl transition-colors cursor-pointer touch-manipulation">Cancel</button>
-          <button type="button" id="dialog-btn-confirm" class="py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs rounded-xl shadow-soft transition-colors cursor-pointer touch-manipulation">Confirm</button>
-        </div>
-      </div>
-    </div>
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[90] flex flex-col items-center gap-2 pointer-events-none w-full max-w-sm px-4"></div>
 
-    <!-- Toast Notification Container -->
-    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[70] flex flex-col items-center gap-2 pointer-events-none max-w-[90vw] w-full px-4"></div>
-
-    <!-- Firebase CDN Compat Libraries (Zero-Build Vanilla PWA Support) -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
-    <!-- Application Script -->
-    <script src="./app.js"></script>
-  </body>
+  <!-- Custom App JavaScript Engine -->
+  <script src="./app.js"></script>
+</body>
 </html>
