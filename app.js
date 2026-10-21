@@ -30,37 +30,37 @@ const auth = typeof firebase !== 'undefined' ? firebase.auth() : null;
 const db = typeof firebase !== 'undefined' ? firebase.firestore() : null;
 
 let currentUser = null;
-let isSignUpMode = true; // Default to Sign Up on initial first launch
 let isGuestSession = false;
 let firestoreUnsubscribe = null;
+let suppressAuthGatewayTransition = false;
 
-// Auth State Watcher: Gates the entire application
+// Realtime Auth State Listener
 if (auth) {
   auth.onAuthStateChanged((user) => {
+    if (suppressAuthGatewayTransition) {
+      return;
+    }
+
     currentUser = user;
     isGuestSession = false;
 
     if (user) {
-      // User is logged in: reveal main app interface
       hideAuthGateway();
       attachRealtimeSync(user.uid);
       updateAuthUI();
       switchPage('home');
     } else {
-      // Detach real-time sync
       if (firestoreUnsubscribe) {
         firestoreUnsubscribe();
         firestoreUnsubscribe = null;
       }
 
-      // Check if user previously opted to continue as guest
       const savedGuest = localStorage.getItem('whereabouts_guest_session');
       if (savedGuest === 'true') {
         isGuestSession = true;
         hideAuthGateway();
         updateAuthUI();
       } else {
-        // Enforce the Login/Register Gateway as the very first screen
         showAuthGateway();
       }
     }
@@ -84,7 +84,6 @@ function showAuthGateway() {
     header.style.display = 'none';
   }
 
-  // Completely lock screen scrolling on the login screen
   document.body.style.overflow = 'hidden';
   document.documentElement.style.overflow = 'hidden';
 }
@@ -104,7 +103,6 @@ function hideAuthGateway() {
     header.style.display = '';
   }
 
-  // Restore normal app scrolling once logged in
   document.body.style.overflow = '';
   document.documentElement.style.overflow = '';
 }
@@ -118,7 +116,6 @@ window.continueAsGuest = function () {
   showToast('Continuing in offline local mode.');
 };
 
-// Toggle password text visibility between masked and plain text
 window.togglePasswordVisibility = function () {
   const pwdInput = document.getElementById('auth-password');
   const icon = document.getElementById('icon-pwd-toggle');
@@ -134,40 +131,106 @@ window.togglePasswordVisibility = function () {
   safeCreateIcons();
 };
 
-// Switch between Register (Sign Up) and Login (Sign In)
-window.toggleAuthMode = function (forceMode) {
-  if (typeof forceMode === 'boolean') {
-    isSignUpMode = forceMode;
-  } else {
-    isSignUpMode = !isSignUpMode;
+window.handleAuthAction = async function (actionType) {
+  if (!auth) {
+    showToast('Firebase not initialized. Check internet connection.');
+    return;
   }
 
-  const title = document.getElementById('gateway-auth-title');
-  const subtitle = document.getElementById('gateway-auth-subtitle');
-  const submitBtn = document.getElementById('gateway-submit-btn');
-  const toggleMsg = document.getElementById('gateway-toggle-msg');
-  const toggleBtn = document.getElementById('gateway-toggle-btn');
-  const forgotBtn = document.getElementById('btn-forgot-password');
+  const emailInput = document.getElementById('auth-email');
+  const passInput = document.getElementById('auth-password');
+  const email = emailInput ? emailInput.value.trim() : '';
+  const password = passInput ? passInput.value : '';
 
-  if (isSignUpMode) {
-    if (title) title.textContent = 'Create an Account';
-    if (subtitle) subtitle.textContent = 'Register once to sync items across all your devices';
-    if (submitBtn) submitBtn.textContent = 'Sign Up';
-    if (toggleMsg) toggleMsg.textContent = 'Already have an account?';
-    if (toggleBtn) toggleBtn.textContent = 'Sign In';
-    if (forgotBtn) forgotBtn.classList.add('hidden'); // Hide forgot password on registration
-  } else {
-    if (title) title.textContent = 'Sign In to Continue';
-    if (subtitle) subtitle.textContent = 'Sync your belongings securely across devices';
-    if (submitBtn) submitBtn.textContent = 'Sign In';
-    if (toggleMsg) toggleMsg.textContent = 'Need an account?';
-    if (toggleBtn) toggleBtn.textContent = 'Sign Up';
-    if (forgotBtn) forgotBtn.classList.remove('hidden'); // Show forgot password when signing in
+  const successBanner = document.getElementById('gateway-signup-success');
+  const errorBanner = document.getElementById('gateway-auth-error');
+  const errorMsg = document.getElementById('gateway-error-msg');
+
+  if (successBanner) successBanner.classList.add('hidden');
+  if (errorBanner) errorBanner.classList.add('hidden');
+
+  if (!email || !email.includes('@')) {
+    if (errorBanner && errorMsg) {
+      errorMsg.textContent = 'Please enter a valid email address.';
+      errorBanner.classList.remove('hidden');
+    } else {
+      showToast('Please enter a valid email address.');
+    }
+    if (emailInput) emailInput.focus();
+    return;
   }
-  safeCreateIcons();
+
+  if (!password || password.length < 6) {
+    if (errorBanner && errorMsg) {
+      errorMsg.textContent = 'Password must be at least 6 characters.';
+      errorBanner.classList.remove('hidden');
+    } else {
+      showToast('Password must be at least 6 characters.');
+    }
+    if (passInput) passInput.focus();
+    return;
+  }
+
+  if (actionType === 'signup') {
+    try {
+      suppressAuthGatewayTransition = true;
+      await auth.createUserWithEmailAndPassword(email, password);
+      await auth.signOut();
+
+      if (successBanner) {
+        successBanner.classList.remove('hidden');
+        safeCreateIcons();
+      }
+
+      showToast('Done · Successfully Signed Up!', 'success');
+      if (passInput) passInput.value = '';
+
+      setTimeout(() => {
+        suppressAuthGatewayTransition = false;
+      }, 3000);
+
+    } catch (err) {
+      suppressAuthGatewayTransition = false;
+      if (err.code === 'auth/email-already-in-use') {
+        if (errorBanner && errorMsg) {
+          errorMsg.textContent = 'This email is already registered. Please tap Sign In.';
+          errorBanner.classList.remove('hidden');
+          safeCreateIcons();
+        }
+        showToast('This email is already registered. Please Sign In.');
+      } else {
+        if (errorBanner && errorMsg) {
+          errorMsg.textContent = err.message || 'Registration failed.';
+          errorBanner.classList.remove('hidden');
+          safeCreateIcons();
+        }
+        showToast(err.message || 'Registration error');
+      }
+    }
+  }
+
+  if (actionType === 'signin') {
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+      localStorage.removeItem('whereabouts_guest_session');
+      showToast('Done · Welcome back!', 'success');
+    } catch (err) {
+      if (errorBanner && errorMsg) {
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+          errorMsg.textContent = 'Account not found or incorrect password. Need an account? Tap Sign Up.';
+        } else if (err.code === 'auth/wrong-password') {
+          errorMsg.textContent = 'Incorrect password. Tap Forgot Password to reset.';
+        } else {
+          errorMsg.textContent = err.message || 'Sign in failed.';
+        }
+        errorBanner.classList.remove('hidden');
+        safeCreateIcons();
+      }
+      showToast(err.message || 'Sign in error');
+    }
+  }
 };
 
-// Forgot Password / Password Reset Flow via Firebase Auth
 window.handleForgotPassword = async function () {
   if (!auth) {
     showToast('Authentication service unavailable.');
@@ -199,41 +262,6 @@ window.handleForgotPassword = async function () {
   });
 };
 
-window.handleAuthSubmit = async function (e) {
-  e.preventDefault();
-  if (!auth) {
-    showToast('Firebase not initialized. Check internet connection.');
-    return;
-  }
-  const emailInput = document.getElementById('auth-email');
-  const passInput = document.getElementById('auth-password');
-  const email = emailInput ? emailInput.value.trim() : '';
-  const password = passInput ? passInput.value : '';
-
-  try {
-    if (isSignUpMode) {
-      await auth.createUserWithEmailAndPassword(email, password);
-      localStorage.removeItem('whereabouts_guest_session');
-      showToast('Account created & synced!');
-    } else {
-      await auth.signInWithEmailAndPassword(email, password);
-      localStorage.removeItem('whereabouts_guest_session');
-      showToast('Signed in successfully!');
-    }
-  } catch (err) {
-    showToast(err.message || 'Authentication error');
-  }
-};
-
-window.handleSignOut = async function () {
-  if (!auth) return;
-  localStorage.removeItem('whereabouts_guest_session');
-  await auth.signOut();
-  showAuthGateway();
-  showToast('Signed out.');
-};
-
-// Live Two-Way Cloud Synchronization (Automatic across all logged-in devices)
 function attachRealtimeSync(uid) {
   if (!db) return;
   if (firestoreUnsubscribe) firestoreUnsubscribe();
@@ -243,7 +271,7 @@ function attachRealtimeSync(uid) {
       const data = doc.data();
       if (data.items && Array.isArray(data.items)) {
         state.items = data.items;
-        saveItems(false); // Update local cache without triggering duplicate upload loop
+        saveItems(false);
       }
       if (data.rooms && Array.isArray(data.rooms)) {
         state.rooms = data.rooms;
@@ -251,7 +279,6 @@ function attachRealtimeSync(uid) {
       }
       renderApp();
     } else {
-      // First time user registers: push local inventory up to cloud
       pushToCloud();
     }
   }, (err) => {
@@ -259,7 +286,6 @@ function attachRealtimeSync(uid) {
   });
 }
 
-// Push local changes to cloud automatically
 async function pushToCloud() {
   if (!currentUser || !db) return;
   try {
@@ -273,109 +299,19 @@ async function pushToCloud() {
   }
 }
 
-window.openAuthModal = function () {
-  const modal = document.getElementById('auth-modal');
-  if (modal) {
-    updateAuthUI();
-    modal.classList.remove('hidden');
-    safeCreateIcons();
-  }
-};
-
-window.closeAuthModal = function () {
-  const modal = document.getElementById('auth-modal');
-  if (modal) modal.classList.add('hidden');
-};
-
 function updateAuthUI() {
-  const loggedInView = document.getElementById('auth-logged-in-view');
-  const form = document.getElementById('auth-form');
-  const userEmail = document.getElementById('auth-user-email');
   const headerLabel = document.getElementById('header-auth-label');
-
-  if (currentUser) {
-    if (loggedInView) loggedInView.classList.remove('hidden');
-    if (form) form.classList.add('hidden');
-    if (userEmail) userEmail.textContent = currentUser.email;
-    if (headerLabel) headerLabel.textContent = 'Account';
-  } else {
-    if (loggedInView) loggedInView.classList.add('hidden');
-    if (form) form.classList.remove('hidden');
-    if (headerLabel) headerLabel.textContent = 'Log In';
+  if (headerLabel) {
+    headerLabel.textContent = currentUser ? 'Account' : 'Log In';
   }
 }
 
-window.toggleAuthMode = function () {
-  isSignUpMode = !isSignUpMode;
-  const title = document.getElementById('auth-modal-title');
-  const submitBtn = document.getElementById('auth-submit-btn');
-  const toggleMsg = document.getElementById('auth-toggle-msg');
-  const toggleBtn = document.getElementById('auth-toggle-btn');
-
-  if (isSignUpMode) {
-    if (title) title.textContent = 'Create Account';
-    if (submitBtn) submitBtn.textContent = 'Sign Up';
-    if (toggleMsg) toggleMsg.textContent = 'Already have an account?';
-    if (toggleBtn) toggleBtn.textContent = 'Sign In';
-  } else {
-    if (title) title.textContent = 'Cloud Account';
-    if (submitBtn) submitBtn.textContent = 'Sign In';
-    if (toggleMsg) toggleMsg.textContent = 'Need an account?';
-    if (toggleBtn) toggleBtn.textContent = 'Sign Up';
-  }
-};
-
-window.handleAuthSubmit = async function (e) {
-  e.preventDefault();
-  if (!auth) {
-    showToast('Firebase not initialized. Check internet connection.');
-    return;
-  }
-  const emailInput = document.getElementById('auth-email');
-  const passInput = document.getElementById('auth-password');
-  const email = emailInput ? emailInput.value.trim() : '';
-  const password = passInput ? passInput.value : '';
-  const successBanner = document.getElementById('gateway-signup-success');
-
-  try {
-    if (isSignUpMode) {
-      // 1. Create account in Firebase
-      await auth.createUserWithEmailAndPassword(email, password);
-      
-      // 2. Temporarily sign out so user explicitly signs in to verify credentials
-      await auth.signOut();
-
-      // 3. Display Green Success Notification Banner with Green Tick
-      if (successBanner) {
-        successBanner.classList.remove('hidden');
-        safeCreateIcons();
-      }
-
-      // 4. Pre-fill email, clear password, and transition screen to Sign-In
-      if (passInput) passInput.value = '';
-      
-      setTimeout(() => {
-        if (successBanner) successBanner.classList.add('hidden');
-        toggleAuthMode(false); // Switch to Sign In mode
-        showToast('Done · Please sign in with your new password', 'success');
-        if (passInput) passInput.focus();
-      }, 1800);
-
-    } else {
-      await auth.signInWithEmailAndPassword(email, password);
-      localStorage.removeItem('whereabouts_guest_session');
-      showToast('Done · Welcome back!', 'success');
-    }
-  } catch (err) {
-    showToast(err.message || 'Authentication error');
-  }
-};
-
 window.handleSignOut = async function () {
   if (!auth) return;
+  localStorage.removeItem('whereabouts_guest_session');
   await auth.signOut();
-  closeAuthModal();
-  showToast('Signed out. Working in local mode.');
+  showAuthGateway();
+  showToast('Signed out.');
 };
 
 window.handleDeleteAccount = function () {
@@ -390,7 +326,7 @@ window.handleDeleteAccount = function () {
           await db.collection('users').doc(currentUser.uid).delete();
           await currentUser.delete();
           showToast('Account and cloud inventory deleted.');
-          closeAuthModal();
+          showAuthGateway();
         }
       } catch (err) {
         showToast(err.message || 'Error deleting account');
@@ -742,7 +678,6 @@ const CATEGORY_THEMES = {
   },
 };
 
-// App State
 const state = {
   items: [],
   rooms: [],
@@ -882,7 +817,6 @@ function getItemLocationText(item) {
   return parts.join(' ') || 'General room area';
 }
 
-// Universal Notification Toast supporting Green "Done" confirmations
 function showToast(message, type = 'default') {
   const container = document.getElementById('toast-container');
   if (!container) return;
@@ -921,7 +855,6 @@ function showToast(message, type = 'default') {
   }, 2400);
 }
 
-// Quick trigger helper for explicit Done actions
 window.showDoneToast = function(subText = '') {
   showToast(subText ? `Done · ${subText}` : 'Done', 'success');
 };
@@ -1778,7 +1711,7 @@ window.handleNotThereChoice = function (choice) {
           item.lastVerifiedAt = new Date().toISOString();
           saveItems();
           renderApp();
-          showToast(`Marked ${item.name} as lent to ${item.lent.lentTo}! Memory healed.`, 'success');
+          showToast(`Done · Marked ${item.name} as lent to ${item.lent.lentTo}!`, 'success');
         },
       });
       break;
@@ -1796,7 +1729,7 @@ window.handleNotThereChoice = function (choice) {
       item.lastVerifiedAt = new Date().toISOString();
       saveItems();
       renderApp();
-      showToast(`Marked ${item.name} as used up (0 in stock). Memory healed!`, 'success');
+      showToast(`Done · Marked ${item.name} as used up (0 in stock)`, 'success');
       break;
 
     case 'missing':
@@ -3086,7 +3019,7 @@ window.confirmNlpCapture = function () {
   if (clearBtn) clearBtn.classList.add('hidden');
   currentParsedNlp = null;
 
-  showToast(`✨ Saved "${newItem.name}" in ${newItem.location.room}!`);
+  showToast(`Done · Saved "${newItem.name}" in ${newItem.location.room}!`, 'success');
   switchPage('home');
 };
 
@@ -3203,7 +3136,7 @@ window.savePhotoClueItem = function () {
   const nameInput = document.getElementById('photo-item-name');
   if (nameInput) nameInput.value = '';
 
-  showToast(`📸 Saved photo clue for ${room}!`);
+  showToast(`Done · Saved photo clue for ${room}!`, 'success');
   switchPage('home');
 };
 
@@ -3349,7 +3282,7 @@ window.saveBulkTourItems = function () {
   if (badges) badges.innerHTML = '';
   state.activeTourItems = [];
 
-  showToast(`🎉 Bulk Tour Complete! Added ${newItems.length} items to ${room}!`);
+  showToast(`Done · Added ${newItems.length} items to ${room}!`, 'success');
   switchPage('home');
 };
 
