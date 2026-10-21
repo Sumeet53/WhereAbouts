@@ -225,3 +225,15 @@ body:has(#view-auth:not(.hidden)) #bottom-bar,
 body:has(#view-auth:not(.hidden)) header {
   display: none !important;
 }
+
+/* Prevent horizontal overflow across the entire application */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden !important;
+}
+
+/* Ensure form selects never push their parent container wider than the screen */
+select {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
