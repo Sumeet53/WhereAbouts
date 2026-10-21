@@ -311,8 +311,39 @@ async function pushToCloud() {
 
 function updateAuthUI() {
   const headerLabel = document.getElementById('header-auth-label');
-  if (headerLabel) {
-    headerLabel.textContent = currentUser ? 'Account' : 'Log In';
+  const profileEmail = document.getElementById('profile-user-email');
+  const profileStatus = document.getElementById('profile-user-status');
+  const profileUid = document.getElementById('profile-user-uid');
+  const profileCount = document.getElementById('profile-item-count');
+
+  if (profileCount) {
+    profileCount.textContent = `${state.items.length} Items`;
+  }
+
+  if (currentUser) {
+    if (headerLabel) headerLabel.textContent = 'Account';
+    if (profileEmail) profileEmail.textContent = currentUser.email || 'No email associated';
+    if (profileStatus) {
+      profileStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> <span>Active Cloud Sync</span>`;
+      profileStatus.className = 'text-xs font-bold text-emerald-700 flex items-center gap-1.5';
+    }
+    if (profileUid) profileUid.textContent = currentUser.uid;
+  } else if (isGuestSession) {
+    if (headerLabel) headerLabel.textContent = 'Guest';
+    if (profileEmail) profileEmail.textContent = 'Guest User (Offline Mode)';
+    if (profileStatus) {
+      profileStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span> <span>Local Only (Not Synced)</span>`;
+      profileStatus.className = 'text-xs font-bold text-amber-700 flex items-center gap-1.5';
+    }
+    if (profileUid) profileUid.textContent = 'Sign in to enable cross-device cloud sync';
+  } else {
+    if (headerLabel) headerLabel.textContent = 'Log In';
+    if (profileEmail) profileEmail.textContent = 'Not Signed In';
+    if (profileStatus) {
+      profileStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-stone-400 inline-block"></span> <span>Signed Out</span>`;
+      profileStatus.className = 'text-xs font-bold text-stone-500 flex items-center gap-1.5';
+    }
+    if (profileUid) profileUid.textContent = 'None';
   }
 }
 
@@ -1533,15 +1564,50 @@ window.handleDailyCheckIn = function () {
   }
 };
 
+// -------------------------------------------------------------------------
+// RELIABLE NOTIFICATION DISPATCHER & SCHEDULER
+// -------------------------------------------------------------------------
+
+async function dispatchAppNotification(title, options = {}) {
+  const defaultOptions = {
+    icon: './icon-192.png',
+    badge: './favicon-32.png',
+    vibrate: [100, 50, 100],
+    data: { url: window.location.href },
+    ...options
+  };
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && reg.showNotification) {
+        return await reg.showNotification(title, defaultOptions);
+      }
+    }
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, defaultOptions);
+    }
+  } catch (err) {
+    console.warn('Notification dispatch fallback:', err);
+  }
+}
+
 window.toggleDailyNotifications = async function () {
-  if (typeof Notification === 'undefined') {
+  if (!('Notification' in window)) {
     showToast('Notifications are not supported on this browser.');
     return;
   }
 
   if (Notification.permission === 'granted') {
-    showToast('Daily reminders are already active on this device!');
+    state.engagement.notificationsEnabled = !state.engagement.notificationsEnabled;
+    saveEngagement();
     renderEngagementStatus();
+    showToast(state.engagement.notificationsEnabled ? 'Daily reminders active!' : 'Daily reminders paused.');
+    return;
+  }
+
+  if (Notification.permission === 'denied') {
+    showToast('Notifications blocked in browser settings. Please enable manually.');
     return;
   }
 
@@ -1551,14 +1617,13 @@ window.toggleDailyNotifications = async function () {
       state.engagement.notificationsEnabled = true;
       saveEngagement();
       renderEngagementStatus();
-      showToast('🔔 Daily reminders enabled!');
 
-      new Notification('WhereAbouts Reminders Active 🌟', {
-        body: 'Welcome! You will receive gentle reminders so you never misplace tools or forget lent items.',
-        icon: './icon-192.png',
+      await dispatchAppNotification('WhereAbouts Reminders Active 🌟', {
+        body: 'You will receive gentle reminders so you always know where your belongings are.',
       });
+      showToast('Done · Daily reminders enabled!', 'success');
     } else {
-      showToast('Notifications were not granted. You can re-enable anytime in browser settings.');
+      showToast('Notification permission not granted.');
     }
   } catch (err) {
     console.error('Notification permission error:', err);
@@ -1566,27 +1631,50 @@ window.toggleDailyNotifications = async function () {
   }
 };
 
-window.sendTestNotification = function () {
-  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+window.sendTestNotification = async function () {
+  if (!('Notification' in window) || Notification.permission !== 'granted') {
     showToast('Please enable notifications first.');
     return;
   }
 
-  const sampleItems = ['Passports', 'Cordless Drill', 'Extra Car Keys', 'First Aid Kit'];
+  const sampleItems = state.items.length > 0 ? state.items : INITIAL_ITEMS;
   const randomItem = sampleItems[Math.floor(Math.random() * sampleItems.length)];
+  const roomName = randomItem.location?.room || 'your home';
 
-  try {
-    new Notification('WhereAbouts: 15s Memory Spot Check 📍', {
-      body: `Quick check! Do you know where your ${randomItem} is stored? Tap to check!`,
-      icon: './icon-192.png',
-      badge: './favicon-32.png',
-    });
-    showToast('Test notification sent! Check your screen/banner.');
-  } catch (err) {
-    console.warn('Error creating test notification:', err);
-    showToast('Could not deliver notification.');
-  }
+  await dispatchAppNotification('WhereAbouts: Spot Check 📍', {
+    body: `Quick check! Do you know where your "${randomItem.name}" is stored in ${roomName}?`,
+  });
+  showToast('Done · Test notification sent!', 'success');
 };
+
+function runPeriodicNotificationCheck() {
+  if (!state.engagement.notificationsEnabled || Notification.permission !== 'granted') return;
+
+  const now = Date.now();
+  const lastSent = state.engagement.lastNotificationTimestamp || 0;
+  const twentyFourHours = 24 * 60 * 60 * 1000;
+
+  if (now - lastSent < twentyFourHours) return;
+
+  const lentDue = state.items.find(i => i.lent && i.lent.isLent);
+  if (lentDue) {
+    dispatchAppNotification('WhereAbouts: Lent Item Check 🤝', {
+      body: `"${lentDue.name}" was lent to ${lentDue.lent.lentTo || 'someone'}. Is it still with them?`,
+    });
+    state.engagement.lastNotificationTimestamp = now;
+    saveEngagement();
+    return;
+  }
+
+  const unverified = state.items.find(i => !i.lastVerifiedAt || i.isMissing);
+  if (unverified) {
+    dispatchAppNotification('WhereAbouts: Quick 15s Check 📍', {
+      body: `Keep your memory fresh! Do you know where your ${unverified.name} is right now?`,
+    });
+    state.engagement.lastNotificationTimestamp = now;
+    saveEngagement();
+  }
+}
 
 window.handleTypeFilterChange = function (val) {
   state.selectedCategory = val;
@@ -1868,6 +1956,8 @@ window.switchPage = function (pageId) {
     renderEngagementStatus();
   } else if (pageId === 'spotcheck') {
     initSpotCheckPage();
+  } else if (pageId === 'about') {
+    updateAuthUI();
   }
 
   window.scrollTo(0, 0);
@@ -3808,6 +3898,10 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     { passive: true }
   );
+
+  // Trigger daily reminder scheduler on launch and every 60 minutes
+  setTimeout(runPeriodicNotificationCheck, 4000);
+  setInterval(runPeriodicNotificationCheck, 60 * 60 * 1000);
 
   switchPage('home');
 });
