@@ -1346,7 +1346,7 @@ function renderSortFilterCard() {
   const typeSelect = document.getElementById('filter-type-select');
   if (typeSelect) {
     const totalCount = state.items.length;
-    let typeOptions = `<option value="All">Types (${totalCount})</option>`;
+    let typeOptions = `<option value="All">All Types (${totalCount})</option>`;
     dynamicTypes.forEach((t) => {
       const isSel = state.selectedCategory === t.name ? 'selected' : '';
       typeOptions += `<option value="${escapeHtml(t.name)}" ${isSel}>${escapeHtml(t.name)} (${t.count})</option>`;
@@ -1358,7 +1358,7 @@ function renderSortFilterCard() {
   const locSelect = document.getElementById('filter-location-select');
   if (locSelect) {
     const uniqueRoomsCount = dynamicLocations.length;
-    let locOptions = `<option value="All">Rooms (${uniqueRoomsCount})</option>`;
+    let locOptions = `<option value="All">All Rooms (${uniqueRoomsCount})</option>`;
     dynamicLocations.forEach((l) => {
       const isSel = state.selectedRoom === l.name ? 'selected' : '';
       locOptions += `<option value="${escapeHtml(l.name)}" ${isSel}>${escapeHtml(l.name)} (${l.count})</option>`;
@@ -1393,13 +1393,9 @@ function renderSortFilterCard() {
     Boolean(state.searchQuery.trim());
 
   if (filterAllBtn) {
-    if (!hasActiveFilters) {
-      filterAllBtn.className =
-        'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer bg-stone-900 text-white shadow-xs';
-    } else {
-      filterAllBtn.className =
-        'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-stone-50';
-    }
+    filterAllBtn.className = !hasActiveFilters
+      ? 'px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer bg-stone-900 text-white shadow-xs shrink-0'
+      : 'px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-stone-50 shrink-0';
   }
 
   if (filterLentBtn) {
@@ -1409,33 +1405,23 @@ function renderSortFilterCard() {
       lentBadge.textContent = lentCount;
       lentBadge.style.display = lentCount > 0 ? 'inline-block' : 'none';
     }
-    if (state.filterLentOnly) {
-      filterLentBtn.className =
-        'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer bg-rose-500 text-white border border-rose-600 shadow-xs flex items-center gap-1.5';
-    } else {
-      filterLentBtn.className =
-        'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-rose-50 flex items-center gap-1.5';
-    }
+    filterLentBtn.className = state.filterLentOnly
+      ? 'px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer bg-rose-500 text-white border border-rose-600 shadow-xs flex items-center gap-1 shrink-0'
+      : 'px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-rose-50 flex items-center gap-1 shrink-0';
   }
 
   if (filterLowBtn) {
     const lowCount = state.items.filter(
-      (i) =>
-        i.consumable?.isConsumable &&
-        (i.consumable.quantity ?? 0) <= (i.consumable.minThreshold ?? 0)
+      (i) => i.consumable?.isConsumable && (i.consumable.quantity ?? 0) <= (i.consumable.minThreshold ?? 0)
     ).length;
     const lowBadge = document.getElementById('badge-low-count');
     if (lowBadge) {
       lowBadge.textContent = lowCount;
       lowBadge.style.display = lowCount > 0 ? 'inline-block' : 'none';
     }
-    if (state.filterLowStockOnly) {
-      filterLowBtn.className =
-        'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer bg-amber-500 text-stone-950 border border-amber-600 shadow-xs flex items-center gap-1.5';
-    } else {
-      filterLowBtn.className =
-        'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-amber-50 flex items-center gap-1.5';
-    }
+    filterLowBtn.className = state.filterLowStockOnly
+      ? 'px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer bg-amber-500 text-stone-950 border border-amber-600 shadow-xs flex items-center gap-1 shrink-0'
+      : 'px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-amber-50 flex items-center gap-1 shrink-0';
   }
 
   if (filterMissingBtn) {
@@ -1445,30 +1431,13 @@ function renderSortFilterCard() {
       missingBadge.textContent = missingCount;
       missingBadge.style.display = missingCount > 0 ? 'inline-flex' : 'none';
     }
-    const labelSpan = filterMissingBtn.querySelector('.missing-label-text');
-    if (labelSpan) {
-      labelSpan.textContent = '🚩 Missing';
-    }
-    if (state.filterMissingOnly) {
-      filterMissingBtn.className =
-        'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer bg-red-600 text-white border border-red-700 shadow-xs flex items-center gap-1.5';
-    } else {
-      if (missingCount > 0) {
-        filterMissingBtn.className =
-          'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black border-2 transition-all cursor-pointer bg-red-50 border-red-400 text-red-900 hover:bg-red-100 flex items-center gap-1.5';
-      } else {
-        filterMissingBtn.className =
-          'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-red-50 flex items-center gap-1.5';
-      }
-    }
+    filterMissingBtn.className = state.filterMissingOnly
+      ? 'px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer bg-red-600 text-white border border-red-700 shadow-xs flex items-center gap-1 shrink-0'
+      : 'px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-red-50 flex items-center gap-1 shrink-0';
   }
 
   if (btnActiveReset) {
-    if (hasActiveFilters) {
-      btnActiveReset.classList.remove('hidden');
-    } else {
-      btnActiveReset.classList.add('hidden');
-    }
+    btnActiveReset.style.display = hasActiveFilters ? 'inline-block' : 'none';
   }
 
   const clearSearchBtn = document.getElementById('btn-clear-search');
@@ -2045,7 +2014,7 @@ function renderDirectAnswerCard(item, confidence, matchReason) {
           ${
             item.isMissing
               ? `<span class="inline-flex items-center gap-1.5 text-xs font-black px-3 py-0.5 rounded-full bg-red-600 text-white border border-red-700 shadow-xs animate-pulse">
-                  <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-white"></i>
+                  <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-white shrink-0"></i>
                   <span>Missing</span>
                 </span>`
               : ''
