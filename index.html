@@ -184,71 +184,104 @@
     </div>
 
     <!-- ================= PAGE 1: HOME VIEW ================= -->
-    <div id="view-home" class="page-view w-full space-y-4 flex flex-col items-center">
-      <!-- ================= COMPACT UNIFIED CONTROLS ================= -->
-      <div class="w-full max-w-xl mx-auto bg-white rounded-2xl border border-stone-200 p-2.5 sm:p-3 shadow-soft space-y-2">
-        <!-- Row 1: Search Bar -->
+    <div id="view-home" class="page-view w-full space-y-3 flex flex-col items-center">
+      
+      <!-- ================= SINGLE UNIFIED CONTROL CARD ================= -->
+      <div class="w-full max-w-xl mx-auto bg-white rounded-3xl border border-stone-200/90 p-3 sm:p-4 shadow-soft space-y-3">
+        
+        <!-- Top Pill View Switcher -->
+        <div class="w-full flex items-center justify-center p-1 bg-stone-100 rounded-2xl shadow-inner text-xs font-bold">
+          <button id="view-tab-grid" onclick="setViewMode('grid')" class="flex-1 py-1.5 rounded-xl transition-all cursor-pointer text-center bg-white text-stone-900 shadow-soft">
+            All Items
+          </button>
+          <button id="view-tab-rooms" onclick="setViewMode('rooms')" class="flex-1 py-1.5 rounded-xl transition-all cursor-pointer text-center text-stone-500 hover:text-stone-900">
+            Rooms
+          </button>
+          <button id="view-tab-lending" onclick="setViewMode('lending')" class="flex-1 py-1.5 rounded-xl transition-all cursor-pointer text-center text-stone-500 hover:text-stone-900">
+            Lent Items
+          </button>
+        </div>
+
+        <!-- Search Input Bar -->
         <div class="relative w-full">
-          <i data-lucide="search" class="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <i data-lucide="search" class="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
           <input
             type="text"
             id="search-input"
-            placeholder="Search items, spots, keywords..."
-            class="w-full pl-9 pr-20 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs sm:text-sm font-semibold text-stone-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 placeholder:text-stone-400"
+            placeholder="Search anything (e.g. passport, drill, keys)..."
+            class="w-full pl-10 pr-20 py-2.5 bg-stone-50 border border-stone-200 rounded-2xl text-xs sm:text-sm font-semibold text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-stone-400 transition-all"
           />
           <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
             <button
               id="btn-clear-search"
               onclick="clearSearchInput()"
               style="display: none;"
-              class="p-1 text-stone-400 hover:text-stone-600 rounded-md cursor-pointer"
+              class="p-1.5 text-stone-400 hover:text-stone-600 rounded-lg cursor-pointer"
               title="Clear search"
             >
               <i data-lucide="x" class="w-3.5 h-3.5"></i>
             </button>
             <button
+              type="button"
               onclick="startQuickVoiceFromHeader()"
-              class="p-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg transition-colors cursor-pointer"
+              class="p-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl transition-colors cursor-pointer"
               title="Voice Search"
             >
-              <i data-lucide="mic" class="w-3.5 h-3.5 text-amber-700"></i>
+              <i data-lucide="mic" class="w-4 h-4 text-amber-700"></i>
             </button>
           </div>
         </div>
 
-        <!-- Row 2: Status Chips & Dropdowns (Single Combined Line) -->
-        <div class="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-stone-100">
-          <!-- Status Filter Chips -->
+        <!-- Filter Chips & Toggle Menu Button -->
+        <div class="flex items-center justify-between gap-1.5 pt-1 border-t border-stone-100">
           <div class="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
-            <button id="filter-btn-all" onclick="resetAllFilters()" class="px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer bg-stone-900 text-white shadow-xs shrink-0">
+            <button id="filter-btn-all" onclick="resetAllFilters()" class="px-2.5 py-1 rounded-xl text-xs font-black transition-all cursor-pointer bg-stone-900 text-white shadow-xs shrink-0">
               All (<span id="stat-total-items">0</span>)
             </button>
-            <button id="filter-btn-missing" onclick="toggleMissingFilter()" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-red-50 flex items-center gap-1 shadow-xs shrink-0">
+            <button id="filter-btn-missing" onclick="toggleMissingFilter()" class="px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-red-50 flex items-center gap-1 shadow-xs shrink-0">
               <span>🚩 Missing</span>
               <span id="badge-missing-count" class="hidden px-1.5 py-0.2 bg-red-600 text-white font-black rounded-full text-[9px]">0</span>
             </button>
-            <button id="filter-btn-lent" onclick="toggleLentFilter()" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-rose-50 flex items-center gap-1 shadow-xs shrink-0">
+            <button id="filter-btn-lent" onclick="toggleLentFilter()" class="px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-rose-50 flex items-center gap-1 shadow-xs shrink-0">
               <span>🤝 Lent</span>
               <span id="badge-lent-count" class="hidden px-1.5 py-0.2 bg-rose-500 text-white font-bold rounded-full text-[9px]">0</span>
             </button>
-            <button id="filter-btn-low" onclick="toggleLowStockFilter()" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-amber-50 flex items-center gap-1 shadow-xs shrink-0">
+            <button id="filter-btn-low" onclick="toggleLowStockFilter()" class="px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-amber-50 flex items-center gap-1 shadow-xs shrink-0">
               <span>📉 Low</span>
               <span id="badge-low-count" class="hidden px-1.5 py-0.2 bg-amber-500 text-stone-950 font-bold rounded-full text-[9px]">0</span>
             </button>
-            <button id="btn-active-reset" onclick="resetAllFilters()" class="hidden px-1.5 text-[11px] text-rose-600 hover:underline font-bold cursor-pointer shrink-0">
+            <button id="btn-active-reset" onclick="resetAllFilters()" class="hidden px-2 text-xs text-rose-600 hover:underline font-bold cursor-pointer shrink-0">
               Reset
             </button>
           </div>
 
-          <!-- Select Dropdowns -->
-          <div class="flex items-center gap-1 ml-auto shrink-0">
-            <select id="filter-type-select" onchange="handleTypeFilterChange(this.value)" class="bg-stone-50 border border-stone-200 text-[11px] font-bold text-stone-700 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer max-w-[90px] truncate">
+          <!-- Slide-out Refine Dropdown Toggle -->
+          <button
+            type="button"
+            onclick="toggleFilterDropdowns()"
+            id="btn-toggle-filters"
+            class="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+            title="Sort and Room filter options"
+          >
+            <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-stone-600"></i>
+            <span class="hidden sm:inline">Refine</span>
+          </button>
+        </div>
+
+        <!-- Collapsible Dropdown Controls (Type, Room, Sort) -->
+        <div id="filter-dropdowns-panel" class="hidden grid grid-cols-3 gap-1.5 pt-2 border-t border-stone-100 transition-all">
+          <div class="min-w-0">
+            <select id="filter-type-select" onchange="handleTypeFilterChange(this.value)" class="w-full bg-stone-50 border border-stone-200 text-stone-800 text-[11px] font-bold rounded-xl px-2 py-1.5 truncate focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer text-center">
               <option value="All">All Types</option>
             </select>
-            <select id="filter-location-select" onchange="handleLocationFilterChange(this.value)" class="bg-stone-50 border border-stone-200 text-[11px] font-bold text-stone-700 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer max-w-[90px] truncate">
+          </div>
+          <div class="min-w-0">
+            <select id="filter-location-select" onchange="handleLocationFilterChange(this.value)" class="w-full bg-stone-50 border border-stone-200 text-stone-800 text-[11px] font-bold rounded-xl px-2 py-1.5 truncate focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer text-center">
               <option value="All">All Rooms</option>
             </select>
-            <select id="sort-order-select" onchange="handleSortOrderChange(this.value)" class="bg-stone-50 border border-stone-200 text-[11px] font-bold text-stone-700 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer max-w-[85px] truncate">
+          </div>
+          <div class="min-w-0">
+            <select id="sort-order-select" onchange="handleSortOrderChange(this.value)" class="w-full bg-stone-50 border border-stone-200 text-stone-800 text-[11px] font-bold rounded-xl px-2 py-1.5 truncate focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer text-center">
               <option value="recent">Recent</option>
               <option value="name-asc">A to Z</option>
               <option value="name-desc">Z to A</option>
@@ -257,69 +290,10 @@
             </select>
           </div>
         </div>
+
       </div>
 
-        <!-- [1] Centered Filter Tags Row -->
-        <div class="w-full flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
-          <button id="filter-btn-all" onclick="resetAllFilters()" class="px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer bg-stone-900 text-white shadow-xs">
-            All (<span id="stat-total-items">0</span>)
-          </button>
-          <button id="filter-btn-missing" onclick="toggleMissingFilter()" class="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-red-50 flex items-center gap-1 shadow-xs">
-            <span class="missing-label-text">🚩 Missing</span>
-            <span id="badge-missing-count" class="hidden px-1.5 py-0.2 bg-red-600 text-white font-black rounded-full text-[10px]">0</span>
-          </button>
-          <button id="filter-btn-lent" onclick="toggleLentFilter()" class="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-rose-50 flex items-center gap-1 shadow-xs">
-            <span>🤝 Lent</span>
-            <span id="badge-lent-count" class="hidden px-1.5 py-0.2 bg-rose-500 text-white font-bold rounded-full text-[10px]">0</span>
-          </button>
-          <button id="filter-btn-low" onclick="toggleLowStockFilter()" class="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-amber-50 flex items-center gap-1 shadow-xs">
-            <span>📉 Low Stock</span>
-            <span id="badge-low-count" class="hidden px-1.5 py-0.2 bg-amber-500 text-stone-950 font-bold rounded-full text-[10px]">0</span>
-          </button>
-          <button id="btn-active-reset" onclick="resetAllFilters()" class="hidden px-2.5 py-1 text-xs text-rose-600 hover:underline font-bold cursor-pointer">
-            Clear Filters
-          </button>
-        </div>
-
-        <!-- [2] Fully Contained 3-Column Dropdown Grid (No Horizontal Overflow) -->
-        <div class="w-full grid grid-cols-3 gap-1.5 sm:gap-2 pt-2 border-t border-stone-100">
-          <div class="w-full min-w-0">
-            <select id="filter-type-select" onchange="handleTypeFilterChange(this.value)" class="w-full bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-800 text-[11px] sm:text-xs font-bold rounded-xl px-2 py-2 truncate focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer text-center">
-              <option value="All">All Types</option>
-            </select>
-          </div>
-          <div class="w-full min-w-0">
-            <select id="filter-location-select" onchange="handleLocationFilterChange(this.value)" class="w-full bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-800 text-[11px] sm:text-xs font-bold rounded-xl px-2 py-2 truncate focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer text-center">
-              <option value="All">All Locations</option>
-            </select>
-          </div>
-          <div class="w-full min-w-0">
-            <select id="sort-order-select" onchange="handleSortOrderChange(this.value)" class="w-full bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-800 text-[11px] sm:text-xs font-bold rounded-xl px-2 py-2 truncate focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer text-center">
-              <option value="recent">Recent</option>
-              <option value="name-asc">A to Z</option>
-              <option value="name-desc">Z to A</option>
-              <option value="room-asc">Room</option>
-              <option value="category">Category</option>
-              <option value="verified">Verified</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- View Switcher Tabs (Grid vs Rooms vs Lending) -->
-      <div class="w-full flex items-center justify-center p-1 bg-stone-200/70 rounded-2xl max-w-sm mx-auto shadow-inner text-xs sm:text-sm">
-        <button id="view-tab-grid" onclick="setViewMode('grid')" class="flex-1 py-1.5 font-bold rounded-xl transition-all cursor-pointer text-center bg-white text-stone-900 shadow-soft">
-          All Items
-        </button>
-        <button id="view-tab-rooms" onclick="setViewMode('rooms')" class="flex-1 py-1.5 font-semibold rounded-xl transition-all cursor-pointer text-center text-stone-600 hover:text-stone-900">
-          Rooms
-        </button>
-        <button id="view-tab-lending" onclick="setViewMode('lending')" class="flex-1 py-1.5 font-semibold rounded-xl transition-all cursor-pointer text-center text-stone-600 hover:text-stone-900">
-          Lent Items
-        </button>
-      </div>
-
-      <!-- Content Container -->
+      <!-- Main Content Container -->
       <div id="main-content-view" class="w-full"></div>
     </div>
 
@@ -768,6 +742,6 @@
   <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[90] flex flex-col items-center gap-2 pointer-events-none w-full max-w-sm px-4"></div>
 
   <!-- Custom App JavaScript Engine -->
-  <script src="./app.js"></script>
+  <script src="./app.js" defer></script>
 </body>
 </html>
