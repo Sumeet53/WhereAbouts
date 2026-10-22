@@ -237,3 +237,12 @@ select {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Clean scrollbar-free chip row */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
