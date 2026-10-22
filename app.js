@@ -1339,6 +1339,13 @@ function renderApp() {
   safeCreateIcons();
 }
 
+window.toggleFilterDropdowns = function () {
+  const panel = document.getElementById('filter-dropdowns-panel');
+  if (panel) {
+    panel.classList.toggle('hidden');
+  }
+};
+
 function renderSortFilterCard() {
   const dynamicTypes = getDynamicTypes();
   const dynamicLocations = getDynamicLocations();
@@ -1394,8 +1401,8 @@ function renderSortFilterCard() {
 
   if (filterAllBtn) {
     filterAllBtn.className = !hasActiveFilters
-      ? 'px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer bg-stone-900 text-white shadow-xs shrink-0'
-      : 'px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-stone-50 shrink-0';
+      ? 'px-2.5 py-1 rounded-xl text-xs font-black transition-all cursor-pointer bg-stone-900 text-white shadow-xs shrink-0'
+      : 'px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-stone-50 shrink-0';
   }
 
   if (filterLentBtn) {
@@ -1406,8 +1413,8 @@ function renderSortFilterCard() {
       lentBadge.style.display = lentCount > 0 ? 'inline-block' : 'none';
     }
     filterLentBtn.className = state.filterLentOnly
-      ? 'px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer bg-rose-500 text-white border border-rose-600 shadow-xs flex items-center gap-1 shrink-0'
-      : 'px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-rose-50 flex items-center gap-1 shrink-0';
+      ? 'px-2.5 py-1 rounded-xl text-xs font-black transition-all cursor-pointer bg-rose-500 text-white border border-rose-600 shadow-xs flex items-center gap-1 shrink-0'
+      : 'px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-rose-50 flex items-center gap-1 shrink-0';
   }
 
   if (filterLowBtn) {
@@ -1420,8 +1427,8 @@ function renderSortFilterCard() {
       lowBadge.style.display = lowCount > 0 ? 'inline-block' : 'none';
     }
     filterLowBtn.className = state.filterLowStockOnly
-      ? 'px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer bg-amber-500 text-stone-950 border border-amber-600 shadow-xs flex items-center gap-1 shrink-0'
-      : 'px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-amber-50 flex items-center gap-1 shrink-0';
+      ? 'px-2.5 py-1 rounded-xl text-xs font-black transition-all cursor-pointer bg-amber-500 text-stone-950 border border-amber-600 shadow-xs flex items-center gap-1 shrink-0'
+      : 'px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-amber-50 flex items-center gap-1 shrink-0';
   }
 
   if (filterMissingBtn) {
@@ -1432,8 +1439,8 @@ function renderSortFilterCard() {
       missingBadge.style.display = missingCount > 0 ? 'inline-flex' : 'none';
     }
     filterMissingBtn.className = state.filterMissingOnly
-      ? 'px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer bg-red-600 text-white border border-red-700 shadow-xs flex items-center gap-1 shrink-0'
-      : 'px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-red-50 flex items-center gap-1 shrink-0';
+      ? 'px-2.5 py-1 rounded-xl text-xs font-black transition-all cursor-pointer bg-red-600 text-white border border-red-700 shadow-xs flex items-center gap-1 shrink-0'
+      : 'px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer bg-white border-stone-300 text-stone-700 hover:bg-red-50 flex items-center gap-1 shrink-0';
   }
 
   if (btnActiveReset) {
@@ -1954,22 +1961,22 @@ function renderMainView() {
   const btnLending = document.getElementById('view-tab-lending');
 
   if (btnGrid)
-    btnGrid.className = `px-5 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer text-center ${
+    btnGrid.className = `flex-1 py-1.5 rounded-xl transition-all cursor-pointer text-center ${
       state.viewMode === 'grid'
         ? 'bg-white text-stone-900 shadow-soft'
-        : 'text-stone-600 hover:text-stone-900'
+        : 'text-stone-500 hover:text-stone-900'
     }`;
   if (btnRooms)
-    btnRooms.className = `px-5 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer text-center ${
+    btnRooms.className = `flex-1 py-1.5 rounded-xl transition-all cursor-pointer text-center ${
       state.viewMode === 'rooms'
         ? 'bg-white text-stone-900 shadow-soft'
-        : 'text-stone-600 hover:text-stone-900'
+        : 'text-stone-500 hover:text-stone-900'
     }`;
   if (btnLending)
-    btnLending.className = `px-5 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 text-center ${
+    btnLending.className = `flex-1 py-1.5 rounded-xl transition-all cursor-pointer text-center ${
       state.viewMode === 'lending'
         ? 'bg-white text-stone-900 shadow-soft'
-        : 'text-stone-600 hover:text-stone-900'
+        : 'text-stone-500 hover:text-stone-900'
     }`;
 
   if (state.viewMode === 'grid') {
@@ -2014,7 +2021,7 @@ function renderDirectAnswerCard(item, confidence, matchReason) {
           ${
             item.isMissing
               ? `<span class="inline-flex items-center gap-1.5 text-xs font-black px-3 py-0.5 rounded-full bg-red-600 text-white border border-red-700 shadow-xs animate-pulse">
-                  <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-white shrink-0"></i>
+                  <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-white"></i>
                   <span>Missing</span>
                 </span>`
               : ''
