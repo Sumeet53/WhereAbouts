@@ -178,7 +178,6 @@ window.handleAuthAction = async function (actionType) {
   if (btnSignIn) btnSignIn.disabled = true;
   if (btnSignUp) btnSignUp.disabled = true;
 
-  // SIGN UP ACTION
   if (actionType === 'signup') {
     try {
       suppressAuthGatewayTransition = true;
@@ -215,7 +214,6 @@ window.handleAuthAction = async function (actionType) {
     }
   }
 
-  // SIGN IN ACTION
   if (actionType === 'signin') {
     try {
       await auth.signInWithEmailAndPassword(email, password);
@@ -743,6 +741,7 @@ const state = {
   isRecordingVoice: false,
   isRecordingTour: false,
   editingItemId: null,
+  isSpotCheckEditing: false, // Tracks if user is editing from inside Spot Check
   spotCheckItems: [],
   spotCheckCurrentIndex: 0,
   deferredInstallPrompt: null,
@@ -1453,6 +1452,10 @@ function renderSortFilterCard() {
   }
 }
 
+// -------------------------------------------------------------------------
+// STABILIZED HOME CLARITY & ROUTINE STATUS
+// -------------------------------------------------------------------------
+
 function renderEngagementStatus() {
   const streakBadge = document.getElementById('streak-counter-badge');
   const healthBadge = document.getElementById('health-score-badge');
@@ -1466,15 +1469,15 @@ function renderEngagementStatus() {
     streakBadge.textContent = `${streak}-Day Organizing Streak`;
   }
 
-  const nowMs = Date.now();
-  const twoWeeksMs = 14 * 24 * 60 * 60 * 1000;
+  // Stable Clarity Metric: Count verified non-missing items out of total active items
+  const totalCount = state.items.length;
   const verifiedCount = state.items.filter((item) => {
-    if (!item.lastVerifiedAt) return false;
-    const diff = nowMs - new Date(item.lastVerifiedAt).getTime();
-    return diff <= twoWeeksMs;
+    if (item.isMissing) return false;
+    return Boolean(item.lastVerifiedAt);
   }).length;
 
-  const clarityScore = state.items.length > 0 ? Math.round((verifiedCount / state.items.length) * 100) : 100;
+  const clarityScore = totalCount > 0 ? Math.round((verifiedCount / totalCount) * 100) : 100;
+
   if (healthBadge) {
     healthBadge.textContent = `Home Clarity: ${clarityScore}%`;
   }
@@ -2021,7 +2024,7 @@ function renderDirectAnswerCard(item, confidence, matchReason) {
           ${
             item.isMissing
               ? `<span class="inline-flex items-center gap-1.5 text-xs font-black px-3 py-0.5 rounded-full bg-red-600 text-white border border-red-700 shadow-xs animate-pulse">
-                  <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-white"></i>
+                  <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-white shrink-0"></i>
                   <span>Missing</span>
                 </span>`
               : ''
@@ -2254,7 +2257,7 @@ function renderItemCardHtml(item) {
           ${
             !item.isMissing
               ? `<span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full border shadow-xs ${confidence.badgeClass}" title="${confidence.label}">
-                  <i data-lucide="${confidence.icon}" class="w-3 h-3 shrink-0"></i>
+                  <i data-lucide="${confidence.icon}" class="w-3.5 h-3.5 shrink-0"></i>
                   <span>${confidence.shortLabel}</span>
                 </span>`
               : ''
@@ -2729,11 +2732,13 @@ window.deleteItem = function (id) {
 
 window.openQuickAddModal = function () {
   state.editingItemId = null;
+  state.isSpotCheckEditing = false;
   switchPage('add');
 };
 
 window.openQuickAddModalWithRoom = function (roomName) {
   state.editingItemId = null;
+  state.isSpotCheckEditing = false;
   switchPage('add');
   setAddCaptureMode('form');
   setTimeout(() => {
@@ -3600,7 +3605,15 @@ window.handleSaveItemSubmit = function (e) {
 
   saveItems();
   handleDailyCheckIn();
-  switchPage('home');
+
+  // If user was changing a spot from inside Spot Check, return to Check screen
+  if (state.isSpotCheckEditing) {
+    state.isSpotCheckEditing = false;
+    state.spotCheckCurrentIndex++;
+    switchPage('spotcheck');
+  } else {
+    switchPage('home');
+  }
 };
 
 window.discardDetailedFormEntry = function () {
@@ -3655,7 +3668,12 @@ window.discardDetailedFormEntry = function () {
   } catch (err) {
     console.warn('Discard cleanup warning:', err);
   } finally {
-    switchPage('home');
+    if (state.isSpotCheckEditing) {
+      state.isSpotCheckEditing = false;
+      switchPage('spotcheck');
+    } else {
+      switchPage('home');
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
@@ -3685,7 +3703,7 @@ function renderSpotCheckStep() {
     container.innerHTML = `
       <div class="text-center py-6 space-y-3 flex flex-col items-center justify-center">
         <p class="text-sm text-stone-600">No items available to spot check. Add items first!</p>
-        <button onclick="switchPage('add')" class="px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-bold">Add Item</button>
+        <button onclick="switchPage('add')" class="px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-bold cursor-pointer">Add Item</button>
       </div>
     `;
     return;
@@ -3768,6 +3786,7 @@ window.confirmSpotCheckItem = function (id) {
 };
 
 window.relocateSpotCheckItem = function (id) {
+  state.isSpotCheckEditing = true;
   editItem(id);
 };
 
