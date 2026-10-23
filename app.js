@@ -33,6 +33,7 @@ let currentUser = null;
 let isGuestSession = false;
 let firestoreUnsubscribe = null;
 let suppressAuthGatewayTransition = false;
+let activeSpeechRecognizer = null; // Clean single voice recognition instance reference
 
 // Realtime Auth State Listener
 if (auth) {
@@ -384,42 +385,36 @@ const INITIAL_ROOMS = [
     name: 'Kitchen & Pantry',
     icon: 'utensils',
     description: 'Appliances, emergency consumables, and pantry supplies',
-    commonZones: ['Pantry Top Shelf', 'Under-Sink Caddy', 'Island Spice Drawer', 'Appliance Cupboard'],
   },
   {
     id: 'hallway-closet',
     name: 'Hallway Closet',
     icon: 'archive',
     description: 'Utility, linen storage, and household supplies',
-    commonZones: ['Top Shelf', 'Middle Wire Rack', 'Floor Storage', 'Coat Rack Hooks'],
   },
   {
     id: 'garage-workshop',
     name: 'Garage & Workshop',
     icon: 'wrench',
     description: 'Tools, hardware, sports gear, and car care',
-    commonZones: ['Work Bench Pegboard', 'Metal Rack Shelf 2', 'Tool Chest Drawer 3', 'Overhead Bins'],
   },
   {
     id: 'living-room',
     name: 'Living Room',
     icon: 'tv',
     description: 'Entertainment console, keys catchall, and shelves',
-    commonZones: ['TV Media Console', 'Side Table Drawer', 'Entryway Catchall Bowl'],
   },
   {
     id: 'home-office',
     name: 'Home Office',
     icon: 'briefcase',
     description: 'Work station, filing cabinet, and cables',
-    commonZones: ['Filing Cabinet Top Drawer', 'Desk Right Drawer', 'Cable Organizer Box', 'Bookshelf'],
   },
   {
     id: 'master-bedroom',
     name: 'Master Bedroom',
     icon: 'bed',
     description: 'Personal storage, nightstands, and walk-in wardrobe',
-    commonZones: ['Closet High Shelf', 'Nightstand Drawer', 'Dresser Valet Tray', 'Underbed Box'],
   },
 ];
 
@@ -434,9 +429,9 @@ const INITIAL_ITEMS = [
       zone: 'Closet top shelf in gray fireproof box (behind winter coats)',
     },
     description: 'Family blue passports, visas, birth certificates, and travel files.',
-    tags: ['passport', 'travel', 'id', 'documents', 'identification', 'kagaz', 'kagaaz', 'visas', 'passports', 'papers'],
+    tags: ['passport', 'travel', 'id', 'documents', 'identification'],
     lent: { isLent: false },
-    lastVerifiedAt: '2026-10-20T10:15:00.000Z',
+    lastVerifiedAt: '2026-10-22T10:15:00.000Z',
     createdAt: '2026-05-10T08:00:00.000Z',
   },
   {
@@ -449,7 +444,7 @@ const INITIAL_ITEMS = [
       zone: 'Middle wire rack in clear divided bin #3 (labeled batteries)',
     },
     description: 'Pre-charged batteries plus 4-slot smart wall charger.',
-    tags: ['batteries', 'aa', 'aaa', 'power', 'remotes', 'toys', 'cell', 'battery', 'charger', 'bettery', 'battry'],
+    tags: ['batteries', 'aa', 'aaa', 'power', 'charger'],
     lent: { isLent: false },
     consumable: {
       isConsumable: true,
@@ -457,7 +452,7 @@ const INITIAL_ITEMS = [
       unit: 'batteries',
       minThreshold: 4,
     },
-    lastVerifiedAt: '2026-10-21T07:22:00.000Z',
+    lastVerifiedAt: '2026-10-22T07:22:00.000Z',
     createdAt: '2026-08-12T09:30:00.000Z',
   },
   {
@@ -470,15 +465,14 @@ const INITIAL_ITEMS = [
       zone: 'Middle shelf under main pegboard workbench (yellow case)',
     },
     description: 'Brushless hammer drill with two batteries and charger.',
-    tags: ['drill', 'dewalt', 'tools', 'screws', 'hardware', 'dril', 'auzar', 'bit kit'],
+    tags: ['drill', 'dewalt', 'tools', 'screws', 'hardware'],
     lent: {
       isLent: true,
       lentTo: 'Dave Miller (Next Door)',
       lentDate: '2026-09-28',
       expectedReturn: '2026-10-18',
-      notes: 'Borrowed for fixing rear wooden fence gate.',
     },
-    lastVerifiedAt: '2026-10-18T16:00:00.000Z',
+    lastVerifiedAt: '2026-10-21T16:00:00.000Z',
     createdAt: '2026-07-01T11:00:00.000Z',
   },
   {
@@ -491,7 +485,7 @@ const INITIAL_ITEMS = [
       zone: 'Pantry top shelf on right wall at eye level (red zippered bag)',
     },
     description: 'Sterile bandages, antiseptic spray, burn gel, and allergy medicine.',
-    tags: ['first aid', 'bandages', 'medicine', 'emergency', 'allergy', 'dawai', 'davai', 'dawa', 'pills', 'tablets'],
+    tags: ['first aid', 'bandages', 'medicine', 'emergency'],
     lent: { isLent: false },
     consumable: {
       isConsumable: true,
@@ -512,10 +506,10 @@ const INITIAL_ITEMS = [
       zone: 'Third drawer down of red Craftsman chest (black padded pouch)',
     },
     description: 'Backlit tire gauge reading up to 150 PSI.',
-    tags: ['car', 'tires', 'gauge', 'pressure', 'automotive', 'tyre', 'hawa', 'pump', 'inflator'],
+    tags: ['car', 'tires', 'gauge', 'pressure', 'inflator'],
     lent: { isLent: false },
-    isMissing: true,
-    lastVerifiedAt: null,
+    isMissing: false,
+    lastVerifiedAt: '2026-10-22T09:00:00.000Z',
     createdAt: '2026-06-01T15:20:00.000Z',
   },
   {
@@ -527,10 +521,10 @@ const INITIAL_ITEMS = [
       spot: 'Desk right drawer top organizer tray (mesh zipper pouch)',
       zone: 'Desk right drawer top organizer tray (mesh zipper pouch)',
     },
-    description: 'Multiport hub with 4K HDMI, Gigabit LAN, and charging for TV cable or external monitor.',
-    tags: ['usb-c', 'hdmi', 'adapter', 'dongle', 'cable', 'monitor', 'tv cable'],
+    description: 'Multiport hub with 4K HDMI and charging for monitor.',
+    tags: ['usb-c', 'hdmi', 'adapter', 'dongle', 'cable'],
     lent: { isLent: false },
-    lastVerifiedAt: '2026-10-21T09:10:00.000Z',
+    lastVerifiedAt: '2026-10-22T09:10:00.000Z',
     createdAt: '2026-08-20T10:00:00.000Z',
   },
   {
@@ -543,7 +537,7 @@ const INITIAL_ITEMS = [
       zone: 'Entryway catchall ceramic bowl next to mirror (leather pouch)',
     },
     description: 'Includes spare fob and brass shed padlock key.',
-    tags: ['keys', 'car', 'fob', 'shed', 'valuable', 'chabi', 'chaabi'],
+    tags: ['keys', 'car', 'fob', 'shed', 'chabi'],
     lent: { isLent: false },
     lastVerifiedAt: '2026-10-22T06:00:00.000Z',
     createdAt: '2026-05-10T14:00:00.000Z',
@@ -558,9 +552,9 @@ const INITIAL_ITEMS = [
       zone: 'Floor storage underneath hanging coats (clear plastic tote)',
     },
     description: 'Crevice tool, dusting brush, and clean spare HEPA filter.',
-    tags: ['vacuum', 'dyson', 'cleaning', 'filter', 'attachments', 'safai'],
+    tags: ['vacuum', 'dyson', 'cleaning', 'filter'],
     lent: { isLent: false },
-    lastVerifiedAt: '2026-10-19T11:00:00.000Z',
+    lastVerifiedAt: '2026-10-21T11:00:00.000Z',
     createdAt: '2026-07-20T16:00:00.000Z',
   },
   {
@@ -573,9 +567,9 @@ const INITIAL_ITEMS = [
       zone: 'Overhead rack front left corner (clear 30L camping tub)',
     },
     description: '350 lumen USB-rechargeable headlamp with red night light mode.',
-    tags: ['headlamp', 'camping', 'flashlight', 'light', 'outdoors', 'torch'],
+    tags: ['headlamp', 'camping', 'flashlight', 'light'],
     lent: { isLent: false },
-    lastVerifiedAt: '2026-10-15T18:00:00.000Z',
+    lastVerifiedAt: '2026-10-20T18:00:00.000Z',
     createdAt: '2026-04-01T12:00:00.000Z',
   },
   {
@@ -588,9 +582,9 @@ const INITIAL_ITEMS = [
       zone: 'Top shelf far left fabric storage cube #1 (labeled winter)',
     },
     description: 'Ski mittens, 2 merino wool beanies, and neck gaiter.',
-    tags: ['gloves', 'winter', 'beanie', 'cold', 'snow', 'clothes', 'kapde'],
+    tags: ['gloves', 'winter', 'beanie', 'cold'],
     lent: { isLent: false },
-    lastVerifiedAt: '2026-10-14T13:00:00.000Z',
+    lastVerifiedAt: '2026-10-20T13:00:00.000Z',
     createdAt: '2026-03-15T10:00:00.000Z',
   },
   {
@@ -603,9 +597,9 @@ const INITIAL_ITEMS = [
       zone: 'TV console cable tray taped to underside of router shelf',
     },
     description: 'Home Wi-Fi backup credentials and recovery keys.',
-    tags: ['wifi', 'internet', 'router', 'password', 'tech', 'network'],
+    tags: ['wifi', 'internet', 'router', 'password'],
     lent: { isLent: false },
-    lastVerifiedAt: '2026-10-21T12:00:00.000Z',
+    lastVerifiedAt: '2026-10-22T12:00:00.000Z',
     createdAt: '2026-08-05T09:00:00.000Z',
   },
   {
@@ -618,9 +612,9 @@ const INITIAL_ITEMS = [
       zone: 'Metal rack shelf 2 upright against wall with bungee cord',
     },
     description: 'Compact collapsible ladder for painting and ceiling fixtures.',
-    tags: ['ladder', 'tools', 'climbing', 'painting', 'garage', 'sidhi'],
+    tags: ['ladder', 'tools', 'climbing', 'garage'],
     lent: { isLent: false },
-    lastVerifiedAt: '2026-10-18T10:00:00.000Z',
+    lastVerifiedAt: '2026-10-22T10:00:00.000Z',
     createdAt: '2026-06-15T14:00:00.000Z',
   },
 ];
@@ -717,7 +711,7 @@ const state = {
   searchQuery: '',
   selectedCategory: 'All',
   selectedRoom: 'All',
-  sortBy: 'recent', // Defaults to newest added item first
+  sortBy: 'recent',
   filterLentOnly: false,
   filterLowStockOnly: false,
   filterMissingOnly: false,
@@ -927,7 +921,7 @@ function getVerificationConfidence(item) {
       status: 'stale',
       badgeClass: 'bg-amber-100 text-amber-950 border-amber-300 ring-1 ring-amber-400/40',
       icon: 'alert-triangle',
-      label: `Last confirmed on ${dateFormatted} (~${Math.max(1, Math.floor(diffDays / 30))} mos ago)`,
+      label: `Confirmed on ${dateFormatted} (~${Math.max(1, Math.floor(diffDays / 30))} mos ago)`,
       shortLabel: `Confirmed ${dateFormatted}`,
     };
   } else if (diffDays <= 7) {
@@ -1005,7 +999,7 @@ function getFilteredItems() {
       break;
     case 'recent':
     default:
-      // STRICT NEWEST ADDED FIRST SORTING
+      // PURE CHRONOLOGICAL NEWEST-TO-OLDEST
       results.sort((a, b) => {
         const timeB = new Date(b.createdAt || b.lastVerifiedAt || 0).getTime();
         const timeA = new Date(a.createdAt || a.lastVerifiedAt || 0).getTime();
@@ -1141,7 +1135,7 @@ function renderSortFilterCard() {
 }
 
 // -------------------------------------------------------------------------
-// STABLE HOME CLARITY CALCULATION (FIXED %)
+// LIVE STABLE HOME CLARITY CALCULATION
 // -------------------------------------------------------------------------
 
 function renderEngagementStatus() {
@@ -1157,7 +1151,7 @@ function renderEngagementStatus() {
     streakBadge.textContent = `${streak}-Day Organizing Streak`;
   }
 
-  // Dynamic Home Clarity: Verified items (not missing) divided by total tracked items
+  // ACCURATE LIVE CLARITY: Verified non-missing items out of total active items
   const totalCount = state.items.length;
   const verifiedCount = state.items.filter((item) => !item.isMissing && Boolean(item.lastVerifiedAt)).length;
   const clarityScore = totalCount > 0 ? Math.round((verifiedCount / totalCount) * 100) : 100;
@@ -1895,7 +1889,7 @@ window.deleteItem = function (id) {
 };
 
 // -------------------------------------------------------------------------
-// SIMPLIFIED VOICE INPUT (CLEAN, DIRECT CAPTURE WITHOUT STUTTER)
+// SIMPLIFIED VOICE ENGINE (FIXES REPETITION & STUTTERING)
 // -------------------------------------------------------------------------
 
 window.handleSimpleVoiceInput = function (text) {
@@ -1928,9 +1922,18 @@ window.toggleVoiceRecognition = function () {
   const vInput = document.getElementById('voice-nlp-input');
   const nameInput = document.getElementById('add-item-name');
 
+  // Terminate any old active recognizer to prevent duplicate event triggers
+  if (activeSpeechRecognizer) {
+    try {
+      activeSpeechRecognizer.abort();
+    } catch (e) {}
+    activeSpeechRecognizer = null;
+  }
+
   const recognition = new SpeechRecognition();
-  recognition.continuous = false; // Prevents stuttering and loops
-  recognition.interimResults = false; // Only takes final clear phrase
+  activeSpeechRecognizer = recognition;
+  recognition.continuous = false; // Strictly single-utterance
+  recognition.interimResults = false; // Prevents streaming duplicates
   recognition.lang = 'en-US';
 
   recognition.onstart = function () {
@@ -1939,7 +1942,12 @@ window.toggleVoiceRecognition = function () {
   };
 
   recognition.onresult = function (event) {
-    const spokenText = event.results[0][0].transcript.trim();
+    if (!event.results || !event.results[0] || !event.results[0][0]) return;
+    let spokenText = event.results[0][0].transcript.trim();
+
+    // Clean duplicate consecutive words (e.g., "car car" -> "car")
+    spokenText = spokenText.replace(/\b(\w+)(?:\s+\1\b)+/gi, '$1');
+
     if (spokenText) {
       if (vInput) vInput.value = spokenText;
       if (nameInput) nameInput.value = spokenText;
@@ -1954,6 +1962,7 @@ window.toggleVoiceRecognition = function () {
   };
 
   recognition.onend = function () {
+    activeSpeechRecognizer = null;
     if (btn) btn.classList.remove('recording-pulse');
     if (label) label.textContent = 'Tap mic and say your item name';
   };
@@ -2060,7 +2069,7 @@ window.handleSaveItemSubmit = function (e) {
       lastVerifiedAt: now,
       createdAt: now,
     };
-    // PUSH NEWEST ITEM DIRECTLY TO THE FRONT
+    // Prepend newly added item so it sits at the top of the collection
     state.items = [newItem, ...state.items];
     showToast(`Done · Saved "${name}" in ${room}`, 'success');
   }
@@ -2068,7 +2077,6 @@ window.handleSaveItemSubmit = function (e) {
   saveItems();
   handleDailyCheckIn();
 
-  // If user changed spot inside the Check Tab, stay inside Spot Check!
   if (state.isSpotCheckEditing) {
     state.isSpotCheckEditing = false;
     state.spotCheckCurrentIndex++;
@@ -2098,7 +2106,6 @@ window.editItem = function (id) {
 // -------------------------------------------------------------------------
 
 function initSpotCheckPage() {
-  // Pull 3 unverified or oldest items
   state.spotCheckItems = [...state.items].sort((a, b) => new Date(a.lastVerifiedAt || 0).getTime() - new Date(b.lastVerifiedAt || 0).getTime()).slice(0, 3);
   state.spotCheckCurrentIndex = 0;
   renderSpotCheckStep();
@@ -2183,7 +2190,7 @@ window.confirmSpotCheckItem = function (id) {
 };
 
 window.relocateSpotCheckItem = function (id) {
-  state.isSpotCheckEditing = true; // Retains Check Tab flow!
+  state.isSpotCheckEditing = true;
   editItem(id);
 };
 
@@ -2249,6 +2256,19 @@ document.addEventListener('DOMContentLoaded', () => {
       renderApp();
     });
   }
+
+  document.addEventListener(
+    'touchend',
+    (e) => {
+      const btn = e.target.closest('button, [role="button"], .nav-tab-btn, label[for]');
+      if (!btn) return;
+      btn.style.opacity = '0.75';
+      setTimeout(() => {
+        btn.style.opacity = '';
+      }, 120);
+    },
+    { passive: true }
+  );
 
   setTimeout(runPeriodicNotificationCheck, 4000);
   switchPage('home');
