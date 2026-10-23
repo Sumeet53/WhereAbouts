@@ -46,25 +46,24 @@
 </head>
 <body class="bg-stone-50 text-stone-900 min-h-screen flex flex-col font-sans antialiased selection:bg-amber-200">
 
-  <!-- ================= TOP APP HEADER ================= -->
+  <!-- ================= TOP APP HEADER: CENTERED NAME, STREAK LEFT, ACCOUNT RIGHT ================= -->
   <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/90 shadow-xs">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
-      <!-- Left: Logo & Title -->
-      <div class="flex items-center gap-2.5 cursor-pointer" onclick="switchPage('home')">
-        <img src="./apple-touch-icon.png" alt="WhereAbouts Logo" class="w-9 h-9 rounded-xl object-contain shadow-xs shrink-0" />
-        <div>
-          <span class="text-lg font-black tracking-tight text-stone-900 block leading-tight">WhereAbouts</span>
-          <span class="text-[10px] text-stone-500 font-semibold block leading-none">Home Inventory</span>
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 h-16 grid grid-cols-3 items-center">
+      <!-- Left: Streak Counter -->
+      <div class="flex items-center justify-start">
+        <div onclick="switchPage('streak')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors shadow-xs" title="Tap to check habits">
+          <span class="text-xs">🔥</span>
+          <span id="header-streak-badge" class="text-xs font-black text-amber-900">3 Days</span>
         </div>
       </div>
 
-      <!-- Center: Quick Streak Badge -->
-      <div onclick="switchPage('streak')" class="cursor-pointer bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1 rounded-full flex items-center gap-1.5 transition-colors shadow-xs" title="Tap to check habits">
-        <span class="text-xs">🔥</span>
-        <span id="header-streak-badge" class="text-xs font-black text-amber-900">3 Days</span>
+      <!-- Middle: Large Centered App Title -->
+      <div class="flex flex-col items-center justify-center cursor-pointer text-center" onclick="switchPage('home')">
+        <span class="text-xl sm:text-2xl font-black tracking-tight text-stone-900 leading-tight">WhereAbouts</span>
+        <span class="text-[10px] text-stone-400 font-semibold leading-none">Home Inventory</span>
       </div>
 
-      <!-- Right Side: Account Profile & PWA Install -->
+      <!-- Right: Account Profile -->
       <div class="flex items-center justify-end gap-1.5">
         <button
           type="button"
@@ -91,7 +90,7 @@
   </header>
 
   <!-- ================= MAIN CONTAINER ================= -->
-  <main class="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 pt-4 pb-28 space-y-5 flex flex-col items-center">
+  <main class="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 pt-4 pb-28 space-y-4 flex flex-col items-center">
 
     <!-- ================= GATEWAY: CLEAN FIXED FULL-SCREEN ================= -->
     <div id="view-auth" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-50 overflow-hidden">
@@ -282,7 +281,7 @@
           </div>
           <div class="min-w-0">
             <select id="sort-order-select" onchange="handleSortOrderChange(this.value)" class="w-full bg-stone-50 border border-stone-200 text-stone-800 text-[11px] font-bold rounded-xl px-2 py-1.5 truncate focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer text-center">
-              <option value="recent">Recent</option>
+              <option value="recent">Recent (Newest First)</option>
               <option value="name-asc">A to Z</option>
               <option value="name-desc">Z to A</option>
               <option value="room-asc">Room</option>
@@ -310,22 +309,22 @@
           </button>
         </div>
 
-        <!-- Voice Quick NLP Autofill Bar -->
+        <!-- Voice Direct Input Bar (Simplified: No Stuttering, Instant Record) -->
         <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-3.5 space-y-2">
           <div class="flex items-center justify-between">
             <span class="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
               <i data-lucide="mic" class="w-3.5 h-3.5 text-amber-600"></i>
-              <span>Voice / AI Autofill</span>
+              <span>Voice Record</span>
             </span>
-            <span id="voice-record-label" class="text-[11px] font-bold text-amber-800">Tap microphone to speak</span>
+            <span id="voice-record-label" class="text-[11px] font-bold text-amber-800">Tap mic and say your item name</span>
           </div>
 
           <div class="flex items-center gap-2">
             <input
               type="text"
               id="voice-nlp-input"
-              oninput="handleNlpInputChange(this.value)"
-              placeholder="e.g. Put extra passport in Master Bedroom gray box"
+              oninput="handleSimpleVoiceInput(this.value)"
+              placeholder="e.g. Car keys, Passport, First aid kit"
               class="flex-1 px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             <button
@@ -347,20 +346,13 @@
               <i data-lucide="mic" class="w-4 h-4"></i>
             </button>
           </div>
-
-          <div id="voice-autofill-notice" class="hidden bg-white/90 border border-amber-300 rounded-xl p-2 text-xs text-stone-700 flex items-center justify-between">
-            <span id="voice-autofill-text">Form filled! Review below.</span>
-            <button type="button" onclick="dismissVoiceNotice()" class="text-stone-400 hover:text-stone-700 ml-2 cursor-pointer">
-              <i data-lucide="x" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
         </div>
 
         <!-- Detailed Form (2-Field Location: Room & Spot) -->
         <form id="full-add-form" onsubmit="handleSaveItemSubmit(event)" class="space-y-4">
           <div>
             <label class="block text-xs font-bold text-stone-800 mb-1">Item Name *</label>
-            <input type="text" id="add-item-name" required placeholder="e.g., Cordless Drill &amp; Bit Kit" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-bold text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <input type="text" id="add-item-name" required placeholder="e.g. Car key fob" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-bold text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -376,17 +368,17 @@
 
           <div>
             <label class="block text-xs font-bold text-stone-800 mb-1">Location / Spot (Shelf, Drawer, Box) *</label>
-            <input type="text" id="add-item-location-desc" required placeholder="e.g. Closet top shelf in gray fireproof box" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <input type="text" id="add-item-location-desc" required placeholder="e.g. Entryway table in white ceramic bowl" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
           </div>
 
           <div>
             <label class="block text-xs font-bold text-stone-800 mb-1">Description &amp; Context Notes</label>
-            <textarea id="add-item-desc" rows="2" placeholder="Optional notes, accessories, or condition..." class="w-full px-3.5 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"></textarea>
+            <textarea id="add-item-desc" rows="2" placeholder="Optional notes or details..." class="w-full px-3.5 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"></textarea>
           </div>
 
           <div>
             <label class="block text-xs font-bold text-stone-800 mb-1">Keywords / Search Tags</label>
-            <input type="text" id="add-item-tags" placeholder="e.g. tools, screws, hardware, drill, auzar" class="w-full px-3.5 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <input type="text" id="add-item-tags" placeholder="e.g. keys, car, fob, chabi" class="w-full px-3.5 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs sm:text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
           </div>
 
           <!-- Photo Clue Upload Container -->
@@ -491,8 +483,8 @@
             <span class="text-[10px] text-amber-800 font-bold">Daily Check-Ins</span>
           </div>
           <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl">
-            <span id="health-score-badge" class="text-sm font-black text-emerald-950 block">Home Clarity: 85%</span>
-            <span class="text-[10px] text-emerald-800 font-bold">Verified Storage</span>
+            <span id="health-score-badge" class="text-sm font-black text-emerald-950 block">Home Clarity: 100%</span>
+            <span class="text-[10px] text-emerald-800 font-bold">Verified Items</span>
           </div>
         </div>
 
