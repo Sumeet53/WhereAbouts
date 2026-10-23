@@ -1,12 +1,12 @@
 // WhereAbouts - Know where everything is.
-// Standard Vanilla PWA Engine (User-Friendly, Zero-Build & Centered Layout)
+// Standard Vanilla PWA Engine (Zero-Build & Stable Render Engine)
 
 const ITEMS_KEY = 'spatialcache_items_v1';
 const ROOMS_KEY = 'spatialcache_rooms_v1';
 const ENGAGEMENT_KEY = 'findit_engagement_v2';
 
 // -------------------------------------------------------------------------
-// FIREBASE CONFIGURATION & AUTOMATIC REAL-TIME SYNC
+// FIREBASE CONFIGURATION & STABLE CLOUD SYNC
 // -------------------------------------------------------------------------
 
 const firebaseConfig = {
@@ -33,14 +33,13 @@ let currentUser = null;
 let isGuestSession = false;
 let firestoreUnsubscribe = null;
 let suppressAuthGatewayTransition = false;
-let activeSpeechRecognizer = null; // Clean single voice recognition instance reference
+let isSyncingFromCloud = false; // Prevents recursive loop
+let activeSpeechRecognizer = null;
 
-// Realtime Auth State Listener
+// Auth State Watcher
 if (auth) {
   auth.onAuthStateChanged((user) => {
-    if (suppressAuthGatewayTransition) {
-      return;
-    }
+    if (suppressAuthGatewayTransition) return;
 
     currentUser = user;
     isGuestSession = false;
@@ -76,17 +75,10 @@ function showAuthGateway() {
 
   pages.forEach((p) => p.classList.add('hidden'));
   if (authGateway) authGateway.classList.remove('hidden');
-  if (bottomBar) {
-    bottomBar.classList.add('hidden');
-    bottomBar.style.display = 'none';
-  }
-  if (header) {
-    header.classList.add('hidden');
-    header.style.display = 'none';
-  }
+  if (bottomBar) bottomBar.style.display = 'none';
+  if (header) header.style.display = 'none';
 
   document.body.style.overflow = 'hidden';
-  document.documentElement.style.overflow = 'hidden';
 }
 
 function hideAuthGateway() {
@@ -95,17 +87,10 @@ function hideAuthGateway() {
   const header = document.querySelector('header');
 
   if (authGateway) authGateway.classList.add('hidden');
-  if (bottomBar) {
-    bottomBar.classList.remove('hidden');
-    bottomBar.style.display = '';
-  }
-  if (header) {
-    header.classList.remove('hidden');
-    header.style.display = '';
-  }
+  if (bottomBar) bottomBar.style.display = '';
+  if (header) header.style.display = '';
 
   document.body.style.overflow = '';
-  document.documentElement.style.overflow = '';
 }
 
 window.continueAsGuest = function () {
@@ -146,10 +131,6 @@ window.handleAuthAction = async function (actionType) {
   if (errorBanner) errorBanner.classList.add('hidden');
 
   if (!auth) {
-    if (errorBanner && errorMsg) {
-      errorMsg.textContent = 'Firebase is connecting or offline. Check network.';
-      errorBanner.classList.remove('hidden');
-    }
     showToast('Firebase not initialized. Check internet connection.');
     return;
   }
@@ -196,19 +177,16 @@ window.handleAuthAction = async function (actionType) {
       setTimeout(() => {
         suppressAuthGatewayTransition = false;
       }, 3000);
-
     } catch (err) {
       suppressAuthGatewayTransition = false;
       if (errorBanner && errorMsg) {
-        if (err.code === 'auth/email-already-in-use') {
-          errorMsg.textContent = 'This email is already registered. Please tap Sign In.';
-        } else {
-          errorMsg.textContent = err.message || 'Registration failed.';
-        }
+        errorMsg.textContent = err.code === 'auth/email-already-in-use'
+          ? 'This email is already registered. Please tap Sign In.'
+          : (err.message || 'Registration failed.');
         errorBanner.classList.remove('hidden');
         safeCreateIcons();
       }
-      showToast(err.code === 'auth/email-already-in-use' ? 'This email is already registered. Please Sign In.' : (err.message || 'Registration error'));
+      showToast(err.code === 'auth/email-already-in-use' ? 'This email is already registered. Please Sign In.' : (err.message || 'Error'));
     } finally {
       if (btnSignIn) btnSignIn.disabled = false;
       if (btnSignUp) btnSignUp.disabled = false;
@@ -222,13 +200,9 @@ window.handleAuthAction = async function (actionType) {
       showToast('Done · Welcome back!', 'success');
     } catch (err) {
       if (errorBanner && errorMsg) {
-        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-          errorMsg.textContent = 'Account not found or wrong password. Need an account? Tap Sign Up.';
-        } else if (err.code === 'auth/wrong-password') {
-          errorMsg.textContent = 'Incorrect password. Tap Forgot Password to reset.';
-        } else {
-          errorMsg.textContent = err.message || 'Sign in failed.';
-        }
+        errorMsg.textContent = err.code === 'auth/wrong-password'
+          ? 'Incorrect password. Tap Forgot Password to reset.'
+          : 'Account not found or incorrect credentials.';
         errorBanner.classList.remove('hidden');
         safeCreateIcons();
       }
@@ -241,11 +215,7 @@ window.handleAuthAction = async function (actionType) {
 };
 
 window.handleForgotPassword = async function () {
-  if (!auth) {
-    showToast('Authentication service unavailable.');
-    return;
-  }
-
+  if (!auth) return;
   const emailInput = document.getElementById('auth-email');
   const email = emailInput ? emailInput.value.trim() : '';
 
@@ -257,7 +227,7 @@ window.handleForgotPassword = async function () {
 
   showConfirmDialog({
     title: 'Reset Password',
-    message: `Send a secure password reset link to ${email}?`,
+    message: `Send password reset email to ${email}?`,
     confirmText: 'Send Reset Link',
     confirmClass: 'bg-stone-900 hover:bg-stone-800 text-white',
     onConfirm: async () => {
@@ -278,25 +248,33 @@ function attachRealtimeSync(uid) {
   firestoreUnsubscribe = db.collection('users').doc(uid).onSnapshot((doc) => {
     if (doc.exists) {
       const data = doc.data();
-      if (data.items && Array.isArray(data.items)) {
-        state.items = data.items;
+      const cloudItems = data.items;
+      const cloudRooms = data.rooms;
+
+      // Deep compare stringified data to avoid re-rendering identical states
+      const localItemsStr = JSON.stringify(state.items);
+      const incomingItemsStr = JSON.stringify(cloudItems || []);
+
+      if (cloudItems && Array.isArray(cloudItems) && localItemsStr !== incomingItemsStr) {
+        isSyncingFromCloud = true;
+        state.items = cloudItems;
         saveItems(false);
+        isSyncingFromCloud = false;
+        renderApp();
       }
-      if (data.rooms && Array.isArray(data.rooms)) {
-        state.rooms = data.rooms;
-        saveRooms();
+
+      if (cloudRooms && Array.isArray(cloudRooms)) {
+        state.rooms = cloudRooms;
+        saveRooms(false);
       }
-      renderApp();
     } else {
       pushToCloud();
     }
-  }, (err) => {
-    console.warn('Realtime sync notice:', err);
-  });
+  }, (err) => console.warn('Sync notice:', err));
 }
 
 async function pushToCloud() {
-  if (!currentUser || !db) return;
+  if (!currentUser || !db || isSyncingFromCloud) return;
   try {
     await db.collection('users').doc(currentUser.uid).set({
       items: state.items,
@@ -315,13 +293,11 @@ function updateAuthUI() {
   const profileUid = document.getElementById('profile-user-uid');
   const profileCount = document.getElementById('profile-item-count');
 
-  if (profileCount) {
-    profileCount.textContent = `${state.items.length} Items`;
-  }
+  if (profileCount) profileCount.textContent = `${state.items.length} Items`;
 
   if (currentUser) {
     if (headerLabel) headerLabel.textContent = 'Account';
-    if (profileEmail) profileEmail.textContent = currentUser.email || 'No email associated';
+    if (profileEmail) profileEmail.textContent = currentUser.email || 'Connected';
     if (profileStatus) {
       profileStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> <span>Active Cloud Sync</span>`;
       profileStatus.className = 'text-xs font-bold text-emerald-700 flex items-center gap-1.5';
@@ -331,18 +307,10 @@ function updateAuthUI() {
     if (headerLabel) headerLabel.textContent = 'Guest';
     if (profileEmail) profileEmail.textContent = 'Guest User (Offline Mode)';
     if (profileStatus) {
-      profileStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span> <span>Local Only (Not Synced)</span>`;
+      profileStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span> <span>Local Storage Only</span>`;
       profileStatus.className = 'text-xs font-bold text-amber-700 flex items-center gap-1.5';
     }
-    if (profileUid) profileUid.textContent = 'Sign in to enable cross-device cloud sync';
-  } else {
-    if (headerLabel) headerLabel.textContent = 'Log In';
-    if (profileEmail) profileEmail.textContent = 'Not Signed In';
-    if (profileStatus) {
-      profileStatus.innerHTML = `<span class="w-2 h-2 rounded-full bg-stone-400 inline-block"></span> <span>Signed Out</span>`;
-      profileStatus.className = 'text-xs font-bold text-stone-500 flex items-center gap-1.5';
-    }
-    if (profileUid) profileUid.textContent = 'None';
+    if (profileUid) profileUid.textContent = 'Sign in to enable cloud sync';
   }
 }
 
@@ -365,7 +333,7 @@ window.handleDeleteAccount = function () {
         if (currentUser && db) {
           await db.collection('users').doc(currentUser.uid).delete();
           await currentUser.delete();
-          showToast('Account and cloud inventory deleted.');
+          showToast('Account and data deleted.');
           showAuthGateway();
         }
       } catch (err) {
@@ -376,46 +344,16 @@ window.handleDeleteAccount = function () {
 };
 
 // -------------------------------------------------------------------------
-// INITIAL DATA & CATEGORY THEMES
+// INITIAL DATA & CATEGORIES
 // -------------------------------------------------------------------------
 
 const INITIAL_ROOMS = [
-  {
-    id: 'kitchen-pantry',
-    name: 'Kitchen & Pantry',
-    icon: 'utensils',
-    description: 'Appliances, emergency consumables, and pantry supplies',
-  },
-  {
-    id: 'hallway-closet',
-    name: 'Hallway Closet',
-    icon: 'archive',
-    description: 'Utility, linen storage, and household supplies',
-  },
-  {
-    id: 'garage-workshop',
-    name: 'Garage & Workshop',
-    icon: 'wrench',
-    description: 'Tools, hardware, sports gear, and car care',
-  },
-  {
-    id: 'living-room',
-    name: 'Living Room',
-    icon: 'tv',
-    description: 'Entertainment console, keys catchall, and shelves',
-  },
-  {
-    id: 'home-office',
-    name: 'Home Office',
-    icon: 'briefcase',
-    description: 'Work station, filing cabinet, and cables',
-  },
-  {
-    id: 'master-bedroom',
-    name: 'Master Bedroom',
-    icon: 'bed',
-    description: 'Personal storage, nightstands, and walk-in wardrobe',
-  },
+  { id: 'kitchen-pantry', name: 'Kitchen & Pantry', icon: 'utensils', description: 'Appliances and pantry items' },
+  { id: 'hallway-closet', name: 'Hallway Closet', icon: 'archive', description: 'Utility and household supplies' },
+  { id: 'garage-workshop', name: 'Garage & Workshop', icon: 'wrench', description: 'Tools and hardware' },
+  { id: 'living-room', name: 'Living Room', icon: 'tv', description: 'Entertainment and electronics' },
+  { id: 'home-office', name: 'Home Office', icon: 'briefcase', description: 'Work desk, tech cables, files' },
+  { id: 'master-bedroom', name: 'Master Bedroom', icon: 'bed', description: 'Personal storage and documents' },
 ];
 
 const INITIAL_ITEMS = [
@@ -423,13 +361,9 @@ const INITIAL_ITEMS = [
     id: 'item-1',
     name: 'Passport & Travel Documents',
     category: 'Documents & Valuables',
-    location: {
-      room: 'Master Bedroom',
-      spot: 'Closet top shelf in gray fireproof box (behind winter coats)',
-      zone: 'Closet top shelf in gray fireproof box (behind winter coats)',
-    },
-    description: 'Family blue passports, visas, birth certificates, and travel files.',
-    tags: ['passport', 'travel', 'id', 'documents', 'identification'],
+    location: { room: 'Master Bedroom', spot: 'Closet top shelf in gray fireproof box' },
+    description: 'Family blue passports, visas, birth certificates.',
+    tags: ['passport', 'travel', 'id', 'documents', 'kagaz'],
     lent: { isLent: false },
     lastVerifiedAt: '2026-10-22T10:15:00.000Z',
     createdAt: '2026-05-10T08:00:00.000Z',
@@ -438,20 +372,11 @@ const INITIAL_ITEMS = [
     id: 'item-2',
     name: 'Rechargeable AA & AAA Batteries',
     category: 'Electronics & Cables',
-    location: {
-      room: 'Hallway Closet',
-      spot: 'Middle wire rack in clear divided bin #3 (labeled batteries)',
-      zone: 'Middle wire rack in clear divided bin #3 (labeled batteries)',
-    },
+    location: { room: 'Hallway Closet', spot: 'Middle wire rack in clear divided bin #3' },
     description: 'Pre-charged batteries plus 4-slot smart wall charger.',
     tags: ['batteries', 'aa', 'aaa', 'power', 'charger'],
     lent: { isLent: false },
-    consumable: {
-      isConsumable: true,
-      quantity: 4,
-      unit: 'batteries',
-      minThreshold: 4,
-    },
+    consumable: { isConsumable: true, quantity: 4, unit: 'batteries', minThreshold: 4 },
     lastVerifiedAt: '2026-10-22T07:22:00.000Z',
     createdAt: '2026-08-12T09:30:00.000Z',
   },
@@ -459,19 +384,10 @@ const INITIAL_ITEMS = [
     id: 'item-3',
     name: 'DeWalt 20V Cordless Drill & Bit Kit',
     category: 'Tools & Hardware',
-    location: {
-      room: 'Garage & Workshop',
-      spot: 'Middle shelf under main pegboard workbench (yellow case)',
-      zone: 'Middle shelf under main pegboard workbench (yellow case)',
-    },
+    location: { room: 'Garage & Workshop', spot: 'Middle shelf under main pegboard workbench' },
     description: 'Brushless hammer drill with two batteries and charger.',
     tags: ['drill', 'dewalt', 'tools', 'screws', 'hardware'],
-    lent: {
-      isLent: true,
-      lentTo: 'Dave Miller (Next Door)',
-      lentDate: '2026-09-28',
-      expectedReturn: '2026-10-18',
-    },
+    lent: { isLent: true, lentTo: 'Dave Miller (Next Door)', lentDate: '2026-09-28' },
     lastVerifiedAt: '2026-10-21T16:00:00.000Z',
     createdAt: '2026-07-01T11:00:00.000Z',
   },
@@ -479,20 +395,11 @@ const INITIAL_ITEMS = [
     id: 'item-4',
     name: 'Emergency First Aid Kit & Antihistamines',
     category: 'Health & Medication',
-    location: {
-      room: 'Kitchen & Pantry',
-      spot: 'Pantry top shelf on right wall at eye level (red zippered bag)',
-      zone: 'Pantry top shelf on right wall at eye level (red zippered bag)',
-    },
-    description: 'Sterile bandages, antiseptic spray, burn gel, and allergy medicine.',
-    tags: ['first aid', 'bandages', 'medicine', 'emergency'],
+    location: { room: 'Kitchen & Pantry', spot: 'Pantry top shelf on right wall at eye level' },
+    description: 'Sterile bandages, antiseptic spray, burn gel, allergy tablets.',
+    tags: ['first aid', 'bandages', 'medicine', 'emergency', 'dawai'],
     lent: { isLent: false },
-    consumable: {
-      isConsumable: true,
-      quantity: 1,
-      unit: 'kit',
-      minThreshold: 1,
-    },
+    consumable: { isConsumable: true, quantity: 1, unit: 'kit', minThreshold: 1 },
     lastVerifiedAt: '2026-10-22T08:30:00.000Z',
     createdAt: '2026-06-15T12:00:00.000Z',
   },
@@ -500,11 +407,7 @@ const INITIAL_ITEMS = [
     id: 'item-5',
     name: 'Digital Tire Pressure Gauge & Inflator',
     category: 'Tools & Hardware',
-    location: {
-      room: 'Garage & Workshop',
-      spot: 'Third drawer down of red Craftsman chest (black padded pouch)',
-      zone: 'Third drawer down of red Craftsman chest (black padded pouch)',
-    },
+    location: { room: 'Garage & Workshop', spot: 'Third drawer down of red Craftsman chest' },
     description: 'Backlit tire gauge reading up to 150 PSI.',
     tags: ['car', 'tires', 'gauge', 'pressure', 'inflator'],
     lent: { isLent: false },
@@ -516,11 +419,7 @@ const INITIAL_ITEMS = [
     id: 'item-6',
     name: 'USB-C to HDMI 4K Display Adapter',
     category: 'Electronics & Cables',
-    location: {
-      room: 'Home Office',
-      spot: 'Desk right drawer top organizer tray (mesh zipper pouch)',
-      zone: 'Desk right drawer top organizer tray (mesh zipper pouch)',
-    },
+    location: { room: 'Home Office', spot: 'Desk right drawer top organizer tray' },
     description: 'Multiport hub with 4K HDMI and charging for monitor.',
     tags: ['usb-c', 'hdmi', 'adapter', 'dongle', 'cable'],
     lent: { isLent: false },
@@ -531,11 +430,7 @@ const INITIAL_ITEMS = [
     id: 'item-7',
     name: 'Spare Car Key Fob & Garden Shed Key',
     category: 'Documents & Valuables',
-    location: {
-      room: 'Living Room',
-      spot: 'Entryway catchall ceramic bowl next to mirror (leather pouch)',
-      zone: 'Entryway catchall ceramic bowl next to mirror (leather pouch)',
-    },
+    location: { room: 'Living Room', spot: 'Entryway catchall ceramic bowl next to mirror' },
     description: 'Includes spare fob and brass shed padlock key.',
     tags: ['keys', 'car', 'fob', 'shed', 'chabi'],
     lent: { isLent: false },
@@ -546,11 +441,7 @@ const INITIAL_ITEMS = [
     id: 'item-8',
     name: 'Dyson Cordless Vacuum Attachments & Filter',
     category: 'Household & Cleaning',
-    location: {
-      room: 'Hallway Closet',
-      spot: 'Floor storage underneath hanging coats (clear plastic tote)',
-      zone: 'Floor storage underneath hanging coats (clear plastic tote)',
-    },
+    location: { room: 'Hallway Closet', spot: 'Floor storage underneath hanging coats' },
     description: 'Crevice tool, dusting brush, and clean spare HEPA filter.',
     tags: ['vacuum', 'dyson', 'cleaning', 'filter'],
     lent: { isLent: false },
@@ -561,11 +452,7 @@ const INITIAL_ITEMS = [
     id: 'item-9',
     name: 'Camping LED Headlamp & Extra Strap',
     category: 'Seasonal & Apparel',
-    location: {
-      room: 'Garage & Workshop',
-      spot: 'Overhead rack front left corner (clear 30L camping tub)',
-      zone: 'Overhead rack front left corner (clear 30L camping tub)',
-    },
+    location: { room: 'Garage & Workshop', spot: 'Overhead rack front left corner in 30L tub' },
     description: '350 lumen USB-rechargeable headlamp with red night light mode.',
     tags: ['headlamp', 'camping', 'flashlight', 'light'],
     lent: { isLent: false },
@@ -576,11 +463,7 @@ const INITIAL_ITEMS = [
     id: 'item-10',
     name: 'Thermal Winter Gloves & Wool Beanies',
     category: 'Seasonal & Apparel',
-    location: {
-      room: 'Hallway Closet',
-      spot: 'Top shelf far left fabric storage cube #1 (labeled winter)',
-      zone: 'Top shelf far left fabric storage cube #1 (labeled winter)',
-    },
+    location: { room: 'Hallway Closet', spot: 'Top shelf far left fabric storage cube #1' },
     description: 'Ski mittens, 2 merino wool beanies, and neck gaiter.',
     tags: ['gloves', 'winter', 'beanie', 'cold'],
     lent: { isLent: false },
@@ -591,11 +474,7 @@ const INITIAL_ITEMS = [
     id: 'item-11',
     name: 'Wi-Fi Network Backup Password Card',
     category: 'Office & Tech',
-    location: {
-      room: 'Living Room',
-      spot: 'TV console cable tray taped to underside of router shelf',
-      zone: 'TV console cable tray taped to underside of router shelf',
-    },
+    location: { room: 'Living Room', spot: 'TV console cable tray taped to underside of router shelf' },
     description: 'Home Wi-Fi backup credentials and recovery keys.',
     tags: ['wifi', 'internet', 'router', 'password'],
     lent: { isLent: false },
@@ -606,13 +485,9 @@ const INITIAL_ITEMS = [
     id: 'item-12',
     name: 'Compact Telescopic Aluminum Ladder (12 ft)',
     category: 'Tools & Hardware',
-    location: {
-      room: 'Garage & Workshop',
-      spot: 'Metal rack shelf 2 upright against wall with bungee cord',
-      zone: 'Metal rack shelf 2 upright against wall with bungee cord',
-    },
+    location: { room: 'Garage & Workshop', spot: 'Metal rack shelf 2 upright against wall' },
     description: 'Compact collapsible ladder for painting and ceiling fixtures.',
-    tags: ['ladder', 'tools', 'climbing', 'garage'],
+    tags: ['ladder', 'tools', 'climbing', 'garage', 'sidhi'],
     lent: { isLent: false },
     lastVerifiedAt: '2026-10-22T10:00:00.000Z',
     createdAt: '2026-06-15T14:00:00.000Z',
@@ -632,70 +507,14 @@ const CATEGORIES = [
 ];
 
 const CATEGORY_THEMES = {
-  'Tools & Hardware': {
-    themeClass: 'cat-theme-tools',
-    bg: 'bg-amber-100',
-    border: 'border-amber-300',
-    badge: 'bg-amber-200 text-amber-950 border-amber-400',
-    innerBox: 'bg-white/85 border-amber-200',
-    icon: 'wrench',
-  },
-  'Electronics & Cables': {
-    themeClass: 'cat-theme-electronics',
-    bg: 'bg-indigo-100',
-    border: 'border-indigo-300',
-    badge: 'bg-indigo-200 text-indigo-950 border-indigo-400',
-    innerBox: 'bg-white/85 border-indigo-200',
-    icon: 'cpu',
-  },
-  'Documents & Valuables': {
-    themeClass: 'cat-theme-documents',
-    bg: 'bg-yellow-100',
-    border: 'border-yellow-300',
-    badge: 'bg-yellow-200 text-yellow-950 border-yellow-400',
-    innerBox: 'bg-white/85 border-yellow-200',
-    icon: 'file-text',
-  },
-  'Health & Medication': {
-    themeClass: 'cat-theme-health',
-    bg: 'bg-rose-100',
-    border: 'border-rose-300',
-    badge: 'bg-rose-200 text-rose-950 border-rose-400',
-    innerBox: 'bg-white/85 border-rose-200',
-    icon: 'shield-plus',
-  },
-  'Household & Cleaning': {
-    themeClass: 'cat-theme-household',
-    bg: 'bg-emerald-100',
-    border: 'border-emerald-300',
-    badge: 'bg-emerald-200 text-emerald-950 border-emerald-400',
-    innerBox: 'bg-white/85 border-emerald-200',
-    icon: 'sparkles',
-  },
-  'Seasonal & Apparel': {
-    themeClass: 'cat-theme-seasonal',
-    bg: 'bg-purple-100',
-    border: 'border-purple-300',
-    badge: 'bg-purple-200 text-purple-950 border-purple-400',
-    innerBox: 'bg-white/85 border-purple-200',
-    icon: 'sun',
-  },
-  'Office & Tech': {
-    themeClass: 'cat-theme-office',
-    bg: 'bg-sky-100',
-    border: 'border-sky-300',
-    badge: 'bg-sky-200 text-sky-950 border-sky-400',
-    innerBox: 'bg-white/85 border-sky-200',
-    icon: 'briefcase',
-  },
-  'Other': {
-    themeClass: 'cat-theme-other',
-    bg: 'bg-stone-100',
-    border: 'border-stone-300',
-    badge: 'bg-stone-200 text-stone-900 border-stone-400',
-    innerBox: 'bg-white/85 border-stone-200',
-    icon: 'package',
-  },
+  'Tools & Hardware': { themeClass: 'cat-theme-tools', bg: 'bg-amber-100', border: 'border-amber-300', badge: 'bg-amber-200 text-amber-950 border-amber-400', innerBox: 'bg-white/85 border-amber-200', icon: 'wrench' },
+  'Electronics & Cables': { themeClass: 'cat-theme-electronics', bg: 'bg-indigo-100', border: 'border-indigo-300', badge: 'bg-indigo-200 text-indigo-950 border-indigo-400', innerBox: 'bg-white/85 border-indigo-200', icon: 'cpu' },
+  'Documents & Valuables': { themeClass: 'cat-theme-documents', bg: 'bg-yellow-100', border: 'border-yellow-300', badge: 'bg-yellow-200 text-yellow-950 border-yellow-400', innerBox: 'bg-white/85 border-yellow-200', icon: 'file-text' },
+  'Health & Medication': { themeClass: 'cat-theme-health', bg: 'bg-rose-100', border: 'border-rose-300', badge: 'bg-rose-200 text-rose-950 border-rose-400', innerBox: 'bg-white/85 border-rose-200', icon: 'shield-plus' },
+  'Household & Cleaning': { themeClass: 'cat-theme-household', bg: 'bg-emerald-100', border: 'border-emerald-300', badge: 'bg-emerald-200 text-emerald-950 border-emerald-400', innerBox: 'bg-white/85 border-emerald-200', icon: 'sparkles' },
+  'Seasonal & Apparel': { themeClass: 'cat-theme-seasonal', bg: 'bg-purple-100', border: 'border-purple-300', badge: 'bg-purple-200 text-purple-950 border-purple-400', innerBox: 'bg-white/85 border-purple-200', icon: 'sun' },
+  'Office & Tech': { themeClass: 'cat-theme-office', bg: 'bg-sky-100', border: 'border-sky-300', badge: 'bg-sky-200 text-sky-950 border-sky-400', innerBox: 'bg-white/85 border-sky-200', icon: 'briefcase' },
+  'Other': { themeClass: 'cat-theme-other', bg: 'bg-stone-100', border: 'border-stone-300', badge: 'bg-stone-200 text-stone-900 border-stone-400', innerBox: 'bg-white/85 border-stone-200', icon: 'package' },
 };
 
 const state = {
@@ -725,7 +544,7 @@ const state = {
 };
 
 // -------------------------------------------------------------------------
-// STORAGE & UTILITY HELPERS
+// STORAGE & UTILITY
 // -------------------------------------------------------------------------
 
 function loadData() {
@@ -746,7 +565,6 @@ function loadData() {
       state.engagement = { ...state.engagement, ...JSON.parse(rawEng) };
     }
   } catch (e) {
-    console.error('Error reading localStorage:', e);
     state.items = INITIAL_ITEMS;
     state.rooms = INITIAL_ROOMS;
   }
@@ -755,7 +573,7 @@ function loadData() {
 function saveItems(shouldSync = true) {
   try {
     localStorage.setItem(ITEMS_KEY, JSON.stringify(state.items));
-    if (shouldSync) {
+    if (shouldSync && !isSyncingFromCloud) {
       pushToCloud();
     }
   } catch (e) {
@@ -763,10 +581,12 @@ function saveItems(shouldSync = true) {
   }
 }
 
-function saveRooms() {
+function saveRooms(shouldSync = true) {
   try {
     localStorage.setItem(ROOMS_KEY, JSON.stringify(state.rooms));
-    pushToCloud();
+    if (shouldSync && !isSyncingFromCloud) {
+      pushToCloud();
+    }
   } catch (e) {
     console.error('Error saving rooms:', e);
   }
@@ -784,9 +604,7 @@ function safeCreateIcons() {
   if (typeof lucide !== 'undefined' && lucide && typeof lucide.createIcons === 'function') {
     try {
       lucide.createIcons();
-    } catch (e) {
-      console.warn('Icon rendering notice:', e);
-    }
+    } catch (e) {}
   }
 }
 
@@ -803,7 +621,7 @@ function escapeHtml(str) {
 function formatStandardDate(dateInput) {
   if (!dateInput) return '';
   const d = new Date(dateInput);
-  if (isNaN(d.getTime())) return String(dateInput);
+  if (isNaN(d.getTime())) return '';
   const day = String(d.getDate()).padStart(2, '0');
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return `${day}-${monthNames[d.getMonth()]}-${d.getFullYear()}`;
@@ -811,8 +629,7 @@ function formatStandardDate(dateInput) {
 
 function getItemLocationText(item) {
   if (!item || !item.location) return 'Location not specified';
-  if (item.location.spot) return item.location.spot;
-  return item.location.zone || 'General room area';
+  return item.location.spot || item.location.zone || 'General room area';
 }
 
 function showToast(message, type = 'default') {
@@ -824,7 +641,7 @@ function showToast(message, type = 'default') {
 
   if (isSuccess) {
     toast.className =
-      'bg-emerald-600 text-white text-sm sm:text-base font-extrabold px-6 py-3.5 rounded-2xl shadow-elevated flex items-center justify-center gap-2.5 pointer-events-auto transform transition-all duration-200 -translate-y-3 opacity-0 text-center border-2 border-emerald-400/80';
+      'bg-emerald-600 text-white text-sm font-extrabold px-6 py-3.5 rounded-2xl shadow-elevated flex items-center justify-center gap-2.5 pointer-events-auto transform transition-all duration-200 -translate-y-3 opacity-0 text-center border-2 border-emerald-400/80';
     toast.innerHTML = `
       <span class="w-6 h-6 rounded-full bg-white text-emerald-700 flex items-center justify-center shrink-0 shadow-xs">
         <i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>
@@ -843,14 +660,11 @@ function showToast(message, type = 'default') {
   container.appendChild(toast);
   safeCreateIcons();
 
-  requestAnimationFrame(() => {
-    toast.classList.remove('-translate-y-3', 'opacity-0');
-  });
-
+  requestAnimationFrame(() => toast.classList.remove('-translate-y-3', 'opacity-0'));
   setTimeout(() => {
     toast.classList.add('opacity-0', 'translate-y-3');
     setTimeout(() => toast.remove(), 250);
-  }, 2400);
+  }, 2200);
 }
 
 function getDynamicTypes() {
@@ -859,14 +673,7 @@ function getDynamicTypes() {
     const cat = item.category || 'Other';
     counts[cat] = (counts[cat] || 0) + 1;
   });
-
-  const list = Object.keys(counts).map((cat) => ({
-    name: cat,
-    count: counts[cat],
-  }));
-
-  list.sort((a, b) => a.name.localeCompare(b.name));
-  return list;
+  return Object.keys(counts).map((cat) => ({ name: cat, count: counts[cat] })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function getDynamicLocations() {
@@ -875,41 +682,19 @@ function getDynamicLocations() {
     const rm = item.location?.room || 'Unassigned';
     counts[rm] = (counts[rm] || 0) + 1;
   });
-
   state.rooms.forEach((r) => {
-    if (!counts[r.name]) {
-      counts[r.name] = 0;
-    }
+    if (!counts[r.name]) counts[r.name] = 0;
   });
-
-  const list = Object.keys(counts).map((rm) => ({
-    name: rm,
-    count: counts[rm],
-  }));
-
-  list.sort((a, b) => a.name.localeCompare(b.name));
-  return list;
+  return Object.keys(counts).map((rm) => ({ name: rm, count: counts[rm] })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function getVerificationConfidence(item) {
   if (item.isMissing) {
-    return {
-      status: 'missing',
-      badgeClass: 'bg-red-600 text-white border-red-700 font-extrabold shadow-xs',
-      icon: 'alert-triangle',
-      label: 'Flagged missing · Not verified today',
-      shortLabel: 'Missing',
-    };
+    return { status: 'missing', badgeClass: 'bg-red-600 text-white border-red-700 font-extrabold shadow-xs', icon: 'alert-triangle', shortLabel: 'Missing' };
   }
 
   if (!item.lastVerifiedAt) {
-    return {
-      status: 'unverified',
-      badgeClass: 'bg-stone-100 text-stone-700 border-stone-300',
-      icon: 'clock',
-      label: 'Not yet verified',
-      shortLabel: 'Not verified',
-    };
+    return { status: 'unverified', badgeClass: 'bg-stone-100 text-stone-700 border-stone-300', icon: 'clock', shortLabel: 'Not verified' };
   }
 
   const verifiedDate = new Date(item.lastVerifiedAt);
@@ -917,64 +702,36 @@ function getVerificationConfidence(item) {
   const dateFormatted = formatStandardDate(verifiedDate);
 
   if (diffDays >= 90) {
-    return {
-      status: 'stale',
-      badgeClass: 'bg-amber-100 text-amber-950 border-amber-300 ring-1 ring-amber-400/40',
-      icon: 'alert-triangle',
-      label: `Confirmed on ${dateFormatted} (~${Math.max(1, Math.floor(diffDays / 30))} mos ago)`,
-      shortLabel: `Confirmed ${dateFormatted}`,
-    };
+    return { status: 'stale', badgeClass: 'bg-amber-100 text-amber-950 border-amber-300 ring-1 ring-amber-400/40', icon: 'alert-triangle', shortLabel: `Confirmed ${dateFormatted}` };
   } else if (diffDays <= 7) {
-    return {
-      status: 'fresh',
-      badgeClass: 'bg-emerald-100 text-emerald-950 border-emerald-300',
-      icon: 'check-circle',
-      label: `Verified fresh (${dateFormatted})`,
-      shortLabel: `Verified ${dateFormatted}`,
-    };
+    return { status: 'fresh', badgeClass: 'bg-emerald-100 text-emerald-950 border-emerald-300', icon: 'check-circle', shortLabel: `Verified ${dateFormatted}` };
   } else {
-    return {
-      status: 'normal',
-      badgeClass: 'bg-stone-100 text-stone-800 border-stone-200',
-      icon: 'calendar',
-      label: `Confirmed on ${dateFormatted}`,
-      shortLabel: `Confirmed ${dateFormatted}`,
-    };
+    return { status: 'normal', badgeClass: 'bg-stone-100 text-stone-800 border-stone-200', icon: 'calendar', shortLabel: `Confirmed ${dateFormatted}` };
   }
 }
 
 // -------------------------------------------------------------------------
-// SIMPLE SEARCH ENGINE & SORTING (NEWEST FIRST BY DEFAULT)
+// ROCK-SOLID SEARCH & STABLE SORTING (NO JUMPING OR FLICKERING)
 // -------------------------------------------------------------------------
 
 function getFilteredItems() {
   const query = state.searchQuery.trim().toLowerCase();
 
   const candidateItems = state.items.filter((item) => {
-    if (state.selectedCategory !== 'All' && item.category !== state.selectedCategory) {
-      return false;
-    }
-    if (state.selectedRoom !== 'All' && item.location.room !== state.selectedRoom) {
-      return false;
-    }
-    if (state.filterLentOnly && (!item.lent || !item.lent.isLent)) {
-      return false;
-    }
+    if (state.selectedCategory !== 'All' && item.category !== state.selectedCategory) return false;
+    if (state.selectedRoom !== 'All' && item.location.room !== state.selectedRoom) return false;
+    if (state.filterLentOnly && (!item.lent || !item.lent.isLent)) return false;
     if (state.filterLowStockOnly) {
-      const isLow =
-        item.consumable?.isConsumable &&
-        (item.consumable.quantity ?? 0) <= (item.consumable.minThreshold ?? 0);
+      const isLow = item.consumable?.isConsumable && (item.consumable.quantity ?? 0) <= (item.consumable.minThreshold ?? 0);
       if (!isLow) return false;
     }
-    if (state.filterMissingOnly && !item.isMissing) {
-      return false;
-    }
+    if (state.filterMissingOnly && !item.isMissing) return false;
     return true;
   });
 
   if (query) {
     return candidateItems.filter((item) => {
-      const name = item.name.toLowerCase();
+      const name = (item.name || '').toLowerCase();
       const desc = (item.description || '').toLowerCase();
       const room = (item.location?.room || '').toLowerCase();
       const spot = getItemLocationText(item).toLowerCase();
@@ -983,27 +740,35 @@ function getFilteredItems() {
     });
   }
 
+  // Stable timestamp parser helper that guarantees no NaN comparisons
+  const safeTime = (item) => {
+    const raw = item.createdAt || item.lastVerifiedAt;
+    if (!raw) return 0;
+    const t = new Date(raw).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
   const results = [...candidateItems];
   switch (state.sortBy) {
     case 'name-asc':
-      results.sort((a, b) => a.name.localeCompare(b.name));
+      results.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       break;
     case 'name-desc':
-      results.sort((a, b) => b.name.localeCompare(a.name));
+      results.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
       break;
     case 'room-asc':
-      results.sort((a, b) => (a.location.room || '').localeCompare(b.location.room || ''));
+      results.sort((a, b) => (a.location?.room || '').localeCompare(b.location?.room || ''));
       break;
     case 'verified':
-      results.sort((a, b) => new Date(a.lastVerifiedAt || 0).getTime() - new Date(b.lastVerifiedAt || 0).getTime());
+      results.sort((a, b) => safeTime(a) - safeTime(b));
       break;
     case 'recent':
     default:
-      // PURE CHRONOLOGICAL NEWEST-TO-OLDEST
+      // Guaranteed deterministic reverse-chronological order (newest first)
       results.sort((a, b) => {
-        const timeB = new Date(b.createdAt || b.lastVerifiedAt || 0).getTime();
-        const timeA = new Date(a.createdAt || a.lastVerifiedAt || 0).getTime();
-        return timeB - timeA;
+        const diff = safeTime(b) - safeTime(a);
+        if (diff !== 0) return diff;
+        return (b.id || '').localeCompare(a.id || ''); // Secondary tie-breaker prevents jitter
       });
       break;
   }
@@ -1024,9 +789,7 @@ function renderApp() {
 
 window.toggleFilterDropdowns = function () {
   const panel = document.getElementById('filter-dropdowns-panel');
-  if (panel) {
-    panel.classList.toggle('hidden');
-  }
+  if (panel) panel.classList.toggle('hidden');
 };
 
 function renderSortFilterCard() {
@@ -1056,9 +819,7 @@ function renderSortFilterCard() {
   }
 
   const sortSelect = document.getElementById('sort-order-select');
-  if (sortSelect) {
-    sortSelect.value = state.sortBy || 'recent';
-  }
+  if (sortSelect) sortSelect.value = state.sortBy || 'recent';
 
   const totalItemsEl = document.getElementById('stat-total-items');
   if (totalItemsEl) totalItemsEl.textContent = state.items.length;
@@ -1135,7 +896,7 @@ function renderSortFilterCard() {
 }
 
 // -------------------------------------------------------------------------
-// LIVE STABLE HOME CLARITY CALCULATION
+// STABLE VERIFIED CLARITY METRIC (DOES NOT FLUCTUATE)
 // -------------------------------------------------------------------------
 
 function renderEngagementStatus() {
@@ -1147,41 +908,30 @@ function renderEngagementStatus() {
   const checkinBtn = document.getElementById('btn-daily-checkin');
 
   const streak = state.engagement.streak || 1;
-  if (streakBadge) {
-    streakBadge.textContent = `${streak}-Day Organizing Streak`;
-  }
+  if (streakBadge) streakBadge.textContent = `${streak}-Day Organizing Streak`;
 
-  // ACCURATE LIVE CLARITY: Verified non-missing items out of total active items
-  const totalCount = state.items.length;
-  const verifiedCount = state.items.filter((item) => !item.isMissing && Boolean(item.lastVerifiedAt)).length;
-  const clarityScore = totalCount > 0 ? Math.round((verifiedCount / totalCount) * 100) : 100;
+  // Absolute clarity calculation based purely on live data
+  const total = state.items.length;
+  const verified = state.items.filter((item) => !item.isMissing && Boolean(item.lastVerifiedAt)).length;
+  const clarity = total > 0 ? Math.round((verified / total) * 100) : 100;
 
-  if (healthBadge) {
-    healthBadge.textContent = `Home Clarity: ${clarityScore}%`;
-  }
+  if (healthBadge) healthBadge.textContent = `Home Clarity: ${clarity}%`;
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const isCheckedInToday = state.engagement.lastCheckInDate === todayStr;
   if (checkinBtn) {
     if (isCheckedInToday) {
       checkinBtn.innerHTML = `<span>✅</span><span>Checked In Today (${streak}🔥)</span>`;
-      checkinBtn.className =
-        'px-4 py-2.5 bg-emerald-100 text-emerald-950 font-extrabold text-sm rounded-xl cursor-default text-center flex items-center justify-center gap-2 shadow-xs border border-emerald-300';
+      checkinBtn.className = 'px-4 py-2.5 bg-emerald-100 text-emerald-950 font-extrabold text-sm rounded-xl cursor-default text-center flex items-center justify-center gap-2 shadow-xs border border-emerald-300';
     } else {
       checkinBtn.innerHTML = `<span>🔥</span><span>Daily Check-In (+1 Streak)</span>`;
-      checkinBtn.className =
-        'px-4 py-2.5 bg-amber-400 hover:bg-amber-500 text-stone-950 font-black text-sm rounded-xl transition-all shadow-soft flex items-center justify-center gap-2 cursor-pointer text-center pulse-subtle';
+      checkinBtn.className = 'px-4 py-2.5 bg-amber-400 hover:bg-amber-500 text-stone-950 font-black text-sm rounded-xl transition-all shadow-soft flex items-center justify-center gap-2 cursor-pointer text-center pulse-subtle';
     }
   }
 
   const notifGranted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
-  if (notifBtnLabel) {
-    notifBtnLabel.textContent = notifGranted ? 'Reminders Active' : 'Enable Daily Reminders';
-  }
-
-  if (testNotifBtn) {
-    testNotifBtn.style.display = notifGranted ? 'inline-block' : 'none';
-  }
+  if (notifBtnLabel) notifBtnLabel.textContent = notifGranted ? 'Reminders Active' : 'Enable Daily Reminders';
+  if (testNotifBtn) testNotifBtn.style.display = notifGranted ? 'inline-block' : 'none';
 
   if (notifNote) {
     notifNote.textContent = notifGranted
@@ -1202,12 +952,11 @@ window.handleDailyCheckIn = function () {
   state.engagement.totalCheckIns = (state.engagement.totalCheckIns || 0) + 1;
   saveEngagement();
   renderEngagementStatus();
-
   showToast(`🎉 Streak increased to ${state.engagement.streak} days!`);
 };
 
 // -------------------------------------------------------------------------
-// NOTIFICATION DISPATCHER
+// NOTIFICATIONS
 // -------------------------------------------------------------------------
 
 async function dispatchAppNotification(title, options = {}) {
@@ -1221,16 +970,12 @@ async function dispatchAppNotification(title, options = {}) {
   try {
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.ready;
-      if (reg && reg.showNotification) {
-        return await reg.showNotification(title, defaultOptions);
-      }
+      if (reg && reg.showNotification) return await reg.showNotification(title, defaultOptions);
     }
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(title, defaultOptions);
     }
-  } catch (err) {
-    console.warn('Notification error:', err);
-  }
+  } catch (err) {}
 }
 
 window.toggleDailyNotifications = async function () {
@@ -1268,7 +1013,6 @@ window.sendTestNotification = async function () {
     showToast('Please enable notifications first.');
     return;
   }
-
   const randomItem = state.items[Math.floor(Math.random() * state.items.length)] || INITIAL_ITEMS[0];
   await dispatchAppNotification('WhereAbouts: Spot Check 📍', {
     body: `Do you know where your "${randomItem.name}" is stored?`,
@@ -1342,7 +1086,7 @@ window.clearSearchInput = function () {
 };
 
 // -------------------------------------------------------------------------
-// SELF-HEALING ("NOT THERE") WORKFLOW
+// SELF-HEALING ("NOT THERE")
 // -------------------------------------------------------------------------
 
 let currentNotThereItemId = null;
@@ -1496,7 +1240,7 @@ window.confirmRelocateItem = function () {
 };
 
 // -------------------------------------------------------------------------
-// PAGE NAVIGATION & VIEWS
+// PAGE NAVIGATION
 // -------------------------------------------------------------------------
 
 window.switchPage = function (pageId) {
@@ -1506,11 +1250,8 @@ window.switchPage = function (pageId) {
   pageList.forEach((p) => {
     const pageEl = document.getElementById(`view-${p}`);
     if (pageEl) {
-      if (p === pageId) {
-        pageEl.classList.remove('hidden');
-      } else {
-        pageEl.classList.add('hidden');
-      }
+      if (p === pageId) pageEl.classList.remove('hidden');
+      else pageEl.classList.add('hidden');
     }
 
     const navBtn = document.getElementById(`nav-btn-${p}`);
@@ -1527,17 +1268,11 @@ window.switchPage = function (pageId) {
     }
   });
 
-  if (pageId === 'home') {
-    renderApp();
-  } else if (pageId === 'add') {
-    initAddView();
-  } else if (pageId === 'streak') {
-    renderEngagementStatus();
-  } else if (pageId === 'spotcheck') {
-    initSpotCheckPage();
-  } else if (pageId === 'about') {
-    updateAuthUI();
-  }
+  if (pageId === 'home') renderApp();
+  else if (pageId === 'add') initAddView();
+  else if (pageId === 'streak') renderEngagementStatus();
+  else if (pageId === 'spotcheck') initSpotCheckPage();
+  else if (pageId === 'about') updateAuthUI();
 
   window.scrollTo(0, 0);
   safeCreateIcons();
@@ -1551,26 +1286,13 @@ function renderMainView() {
   const btnRooms = document.getElementById('view-tab-rooms');
   const btnLending = document.getElementById('view-tab-lending');
 
-  if (btnGrid)
-    btnGrid.className = `flex-1 py-1.5 rounded-xl transition-all cursor-pointer text-center ${
-      state.viewMode === 'grid' ? 'bg-white text-stone-900 shadow-soft' : 'text-stone-500 hover:text-stone-900'
-    }`;
-  if (btnRooms)
-    btnRooms.className = `flex-1 py-1.5 rounded-xl transition-all cursor-pointer text-center ${
-      state.viewMode === 'rooms' ? 'bg-white text-stone-900 shadow-soft' : 'text-stone-500 hover:text-stone-900'
-    }`;
-  if (btnLending)
-    btnLending.className = `flex-1 py-1.5 rounded-xl transition-all cursor-pointer text-center ${
-      state.viewMode === 'lending' ? 'bg-white text-stone-900 shadow-soft' : 'text-stone-500 hover:text-stone-900'
-    }`;
+  if (btnGrid) btnGrid.className = `flex-1 py-1.5 rounded-xl transition-all cursor-pointer text-center ${state.viewMode === 'grid' ? 'bg-white text-stone-900 shadow-soft' : 'text-stone-500 hover:text-stone-900'}`;
+  if (btnRooms) btnRooms.className = `flex-1 py-1.5 rounded-xl transition-all cursor-pointer text-center ${state.viewMode === 'rooms' ? 'bg-white text-stone-900 shadow-soft' : 'text-stone-500 hover:text-stone-900'}`;
+  if (btnLending) btnLending.className = `flex-1 py-1.5 rounded-xl transition-all cursor-pointer text-center ${state.viewMode === 'lending' ? 'bg-white text-stone-900 shadow-soft' : 'text-stone-500 hover:text-stone-900'}`;
 
-  if (state.viewMode === 'grid') {
-    renderGridView(container);
-  } else if (state.viewMode === 'rooms') {
-    renderRoomsView(container);
-  } else if (state.viewMode === 'lending') {
-    renderLendingView(container);
-  }
+  if (state.viewMode === 'grid') renderGridView(container);
+  else if (state.viewMode === 'rooms') renderRoomsView(container);
+  else if (state.viewMode === 'lending') renderLendingView(container);
 }
 
 function renderGridView(container) {
@@ -1595,7 +1317,7 @@ function renderGridView(container) {
   container.innerHTML = `
     <div class="space-y-3.5 w-full flex flex-col items-center">
       <div class="w-full flex items-center justify-between text-xs sm:text-sm text-stone-600 px-1 text-center">
-        <span>Showing <strong>${filtered.length}</strong> of <strong>${state.items.length}</strong> items (Newest first)</span>
+        <span>Showing <strong>${filtered.length}</strong> of <strong>${state.items.length}</strong> items</span>
         <span class="text-amber-800 font-bold">Tap card to verify spot</span>
       </div>
 
@@ -1889,18 +1611,14 @@ window.deleteItem = function (id) {
 };
 
 // -------------------------------------------------------------------------
-// SIMPLIFIED VOICE ENGINE (FIXES REPETITION & STUTTERING)
+// CLEAN SINGLE-INSTANCE VOICE RECOGNITION (NO DOUBLE WORDS)
 // -------------------------------------------------------------------------
 
 window.handleSimpleVoiceInput = function (text) {
   const nameInput = document.getElementById('add-item-name');
-  if (nameInput) {
-    nameInput.value = text;
-  }
+  if (nameInput) nameInput.value = text;
   const clearBtn = document.getElementById('btn-voice-input-clear');
-  if (clearBtn) {
-    clearBtn.style.display = text ? 'block' : 'none';
-  }
+  if (clearBtn) clearBtn.style.display = text ? 'block' : 'none';
 };
 
 window.clearVoiceInputOnly = function () {
@@ -1922,7 +1640,7 @@ window.toggleVoiceRecognition = function () {
   const vInput = document.getElementById('voice-nlp-input');
   const nameInput = document.getElementById('add-item-name');
 
-  // Terminate any old active recognizer to prevent duplicate event triggers
+  // Hard cancel previous instance
   if (activeSpeechRecognizer) {
     try {
       activeSpeechRecognizer.abort();
@@ -1932,8 +1650,8 @@ window.toggleVoiceRecognition = function () {
 
   const recognition = new SpeechRecognition();
   activeSpeechRecognizer = recognition;
-  recognition.continuous = false; // Strictly single-utterance
-  recognition.interimResults = false; // Prevents streaming duplicates
+  recognition.continuous = false;
+  recognition.interimResults = false;
   recognition.lang = 'en-US';
 
   recognition.onstart = function () {
@@ -1945,7 +1663,7 @@ window.toggleVoiceRecognition = function () {
     if (!event.results || !event.results[0] || !event.results[0][0]) return;
     let spokenText = event.results[0][0].transcript.trim();
 
-    // Clean duplicate consecutive words (e.g., "car car" -> "car")
+    // Auto-remove repeated consecutive syllables/words (e.g. "car car car" -> "car")
     spokenText = spokenText.replace(/\b(\w+)(?:\s+\1\b)+/gi, '$1');
 
     if (spokenText) {
@@ -1964,7 +1682,7 @@ window.toggleVoiceRecognition = function () {
   recognition.onend = function () {
     activeSpeechRecognizer = null;
     if (btn) btn.classList.remove('recording-pulse');
-    if (label) label.textContent = 'Tap mic and say your item name';
+    if (label) label.textContent = 'Tap mic to speak item name';
   };
 
   try {
@@ -1975,7 +1693,7 @@ window.toggleVoiceRecognition = function () {
 };
 
 // -------------------------------------------------------------------------
-// ADD / EDIT FORM HANDLING
+// ADD / EDIT FORM
 // -------------------------------------------------------------------------
 
 window.openQuickAddModal = function () {
@@ -2069,7 +1787,6 @@ window.handleSaveItemSubmit = function (e) {
       lastVerifiedAt: now,
       createdAt: now,
     };
-    // Prepend newly added item so it sits at the top of the collection
     state.items = [newItem, ...state.items];
     showToast(`Done · Saved "${name}" in ${room}`, 'success');
   }
@@ -2102,7 +1819,7 @@ window.editItem = function (id) {
 };
 
 // -------------------------------------------------------------------------
-// SPOT CHECK (CONTINUES THROUGH ENTIRE FLOW WITHOUT EXITING)
+// SPOT CHECK
 // -------------------------------------------------------------------------
 
 function initSpotCheckPage() {
@@ -2132,9 +1849,7 @@ function renderSpotCheckStep() {
           <i data-lucide="check" class="w-7 h-7"></i>
         </div>
         <h3 class="text-lg font-black text-stone-900">All Spot Checks Completed!</h3>
-        <p class="text-sm text-stone-600 max-w-xs mx-auto text-center">
-          You confirmed your items are right where they belong.
-        </p>
+        <p class="text-sm text-stone-600 max-w-xs mx-auto text-center">You confirmed your items are right where they belong.</p>
         <button onclick="switchPage('home')" class="px-6 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-bold hover:bg-stone-800 transition-colors cursor-pointer shadow-soft text-center">
           Back to Home
         </button>
@@ -2148,10 +1863,7 @@ function renderSpotCheckStep() {
 
   container.innerHTML = `
     <div class="space-y-3.5 w-full flex flex-col items-center justify-center text-center max-w-sm">
-      <div class="text-xs sm:text-sm text-stone-500 font-extrabold">
-        Item ${state.spotCheckCurrentIndex + 1} of ${state.spotCheckItems.length}
-      </div>
-
+      <div class="text-xs sm:text-sm text-stone-500 font-extrabold">Item ${state.spotCheckCurrentIndex + 1} of ${state.spotCheckItems.length}</div>
       <div class="bg-amber-50/80 border border-amber-200 rounded-xl p-4 space-y-2 w-full text-center">
         <h4 class="text-lg font-black text-stone-900">${escapeHtml(item.name)}</h4>
         <div class="text-sm text-stone-900 flex items-center justify-center gap-1.5 font-bold">
@@ -2159,21 +1871,13 @@ function renderSpotCheckStep() {
           <span>${escapeHtml(item.location.room)} › ${escapeHtml(getItemLocationText(item))}</span>
         </div>
       </div>
-
       <p class="text-sm text-stone-800 font-extrabold text-center">Is this still in this spot?</p>
-
       <div class="grid grid-cols-2 gap-2.5 pt-1 w-full">
-        <button
-          onclick="confirmSpotCheckItem('${item.id}')"
-          class="py-3 px-3 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-soft text-center"
-        >
+        <button onclick="confirmSpotCheckItem('${item.id}')" class="py-3 px-3 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-soft text-center">
           <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
           <span>Still there</span>
         </button>
-        <button
-          onclick="relocateSpotCheckItem('${item.id}')"
-          class="py-3 px-3 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-center"
-        >
+        <button onclick="relocateSpotCheckItem('${item.id}')" class="py-3 px-3 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-center">
           <i data-lucide="pencil" class="w-4 h-4 text-stone-500"></i>
           <span>Change spot</span>
         </button>
@@ -2196,9 +1900,7 @@ window.relocateSpotCheckItem = function (id) {
 
 window.startQuickVoiceFromHeader = function () {
   switchPage('add');
-  setTimeout(() => {
-    toggleVoiceRecognition();
-  }, 250);
+  setTimeout(() => toggleVoiceRecognition(), 250);
 };
 
 window.resetData = function () {
@@ -2256,19 +1958,6 @@ document.addEventListener('DOMContentLoaded', () => {
       renderApp();
     });
   }
-
-  document.addEventListener(
-    'touchend',
-    (e) => {
-      const btn = e.target.closest('button, [role="button"], .nav-tab-btn, label[for]');
-      if (!btn) return;
-      btn.style.opacity = '0.75';
-      setTimeout(() => {
-        btn.style.opacity = '';
-      }, 120);
-    },
-    { passive: true }
-  );
 
   setTimeout(runPeriodicNotificationCheck, 4000);
   switchPage('home');
