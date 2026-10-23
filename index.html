@@ -46,7 +46,7 @@
 </head>
 <body class="bg-stone-50 text-stone-900 min-h-screen flex flex-col font-sans antialiased selection:bg-amber-200">
 
-  <!-- ================= TOP APP HEADER: CENTERED NAME, STREAK LEFT, ACCOUNT RIGHT ================= -->
+  <!-- ================= TOP APP HEADER: ICON + NAME IN MIDDLE, STREAK LEFT, ACCOUNT RIGHT ================= -->
   <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/90 shadow-xs">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 h-16 grid grid-cols-3 items-center">
       <!-- Left: Streak Counter -->
@@ -57,10 +57,13 @@
         </div>
       </div>
 
-      <!-- Middle: Large Centered App Title -->
-      <div class="flex flex-col items-center justify-center cursor-pointer text-center" onclick="switchPage('home')">
-        <span class="text-xl sm:text-2xl font-black tracking-tight text-stone-900 leading-tight">WhereAbouts</span>
-        <span class="text-[10px] text-stone-400 font-semibold leading-none">Home Inventory</span>
+      <!-- Middle: Logo Icon + App Title -->
+      <div class="flex items-center justify-center gap-2 cursor-pointer text-center" onclick="switchPage('home')">
+        <img src="./apple-touch-icon.png" alt="WhereAbouts Logo" class="w-8 h-8 rounded-xl object-contain shadow-xs shrink-0" />
+        <div class="flex flex-col items-start text-left">
+          <span class="text-lg sm:text-2xl font-black tracking-tight text-stone-900 leading-tight">WhereAbouts</span>
+          <span class="text-[9px] sm:text-[10px] text-stone-400 font-semibold leading-none">Home Inventory</span>
+        </div>
       </div>
 
       <!-- Right: Account Profile -->
@@ -95,21 +98,18 @@
     <!-- ================= GATEWAY: CLEAN FIXED FULL-SCREEN ================= -->
     <div id="view-auth" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-50 overflow-hidden">
       <div class="w-full max-w-sm flex flex-col items-center justify-center text-center space-y-4">
-        <!-- Logo & Header -->
         <div class="flex flex-col items-center justify-center space-y-1.5">
           <img src="./apple-touch-icon.png" alt="WhereAbouts Logo" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-contain shadow-soft shrink-0" />
           <h1 class="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight leading-none">WhereAbouts</h1>
           <p class="text-xs sm:text-sm text-stone-500 font-semibold">Know where everything is.</p>
         </div>
 
-        <!-- White Centered Auth Card -->
         <div class="w-full bg-white border border-stone-200/90 rounded-3xl p-6 shadow-elevated space-y-4 text-center flex flex-col items-center">
           <div class="space-y-1 text-center w-full">
             <h2 id="gateway-auth-title" class="text-xl sm:text-2xl font-black text-stone-900">Sign In or Register</h2>
             <p id="gateway-auth-subtitle" class="text-xs text-stone-500">Sync your belongings securely across devices</p>
           </div>
 
-          <!-- Green Registration Success Banner -->
           <div id="gateway-signup-success" class="hidden w-full bg-emerald-100 border-2 border-emerald-500 rounded-2xl p-3.5 text-center space-y-1 shadow-xs transition-all">
             <div class="flex items-center justify-center gap-2 text-emerald-950 font-black text-sm sm:text-base">
               <span class="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
@@ -120,7 +120,6 @@
             <p class="text-xs text-emerald-800 font-semibold">Please tap &ldquo;Sign In&rdquo; below to enter your account.</p>
           </div>
 
-          <!-- Red Error Alert Banner -->
           <div id="gateway-auth-error" class="hidden w-full bg-red-50 border-2 border-red-400 rounded-2xl p-3 text-center space-y-0.5 shadow-xs transition-all">
             <div class="flex items-center justify-center gap-1.5 text-red-950 font-bold text-xs sm:text-sm">
               <i data-lucide="alert-triangle" class="w-4 h-4 text-red-600 shrink-0"></i>
@@ -149,7 +148,6 @@
               </div>
             </div>
 
-            <!-- Side-by-Side Centered Action Buttons -->
             <div class="flex items-center justify-center gap-3 pt-2 w-full">
               <button
                 type="button"
@@ -301,22 +299,22 @@
       <div class="bg-white rounded-3xl border border-stone-200 p-5 sm:p-6 shadow-soft space-y-5">
         <div class="flex items-center justify-between border-b border-stone-100 pb-3">
           <div>
-            <h2 id="add-view-title" class="text-xl font-black text-stone-900">Add to Physical Memory</h2>
-            <p class="text-xs text-stone-500">Record an item's room and exact spot</p>
+            <h2 id="add-view-title" class="text-xl font-black text-stone-900">Add Item</h2>
+            <p class="text-xs text-stone-500">Record where your item belongs</p>
           </div>
           <button onclick="discardDetailedFormEntry()" class="text-stone-400 hover:text-stone-600 p-1 cursor-pointer">
             <i data-lucide="x" class="w-5 h-5"></i>
           </button>
         </div>
 
-        <!-- Voice Direct Input Bar (Simplified: No Stuttering, Instant Record) -->
+        <!-- Single-Phrase Voice Capture (No stuttering or duplicates) -->
         <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-3.5 space-y-2">
           <div class="flex items-center justify-between">
             <span class="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
               <i data-lucide="mic" class="w-3.5 h-3.5 text-amber-600"></i>
-              <span>Voice Record</span>
+              <span>Voice Entry</span>
             </span>
-            <span id="voice-record-label" class="text-[11px] font-bold text-amber-800">Tap mic and say your item name</span>
+            <span id="voice-record-label" class="text-[11px] font-bold text-amber-800">Tap mic to speak item name</span>
           </div>
 
           <div class="flex items-center gap-2">
@@ -324,7 +322,7 @@
               type="text"
               id="voice-nlp-input"
               oninput="handleSimpleVoiceInput(this.value)"
-              placeholder="e.g. Car keys, Passport, First aid kit"
+              placeholder="e.g. Car keys, Drill, Reading glasses"
               class="flex-1 px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
             <button
@@ -352,7 +350,7 @@
         <form id="full-add-form" onsubmit="handleSaveItemSubmit(event)" class="space-y-4">
           <div>
             <label class="block text-xs font-bold text-stone-800 mb-1">Item Name *</label>
-            <input type="text" id="add-item-name" required placeholder="e.g. Car key fob" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-bold text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <input type="text" id="add-item-name" required placeholder="e.g. Car keys" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-bold text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -368,7 +366,7 @@
 
           <div>
             <label class="block text-xs font-bold text-stone-800 mb-1">Location / Spot (Shelf, Drawer, Box) *</label>
-            <input type="text" id="add-item-location-desc" required placeholder="e.g. Entryway table in white ceramic bowl" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <input type="text" id="add-item-location-desc" required placeholder="e.g. Entryway table in ceramic bowl" class="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm text-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" />
           </div>
 
           <div>
@@ -539,8 +537,6 @@
     <!-- ================= PAGE 5: USER ACCOUNT & PROFILE VIEW ================= -->
     <div id="view-about" class="page-view hidden w-full max-w-lg mx-auto space-y-4">
       <div class="bg-white rounded-3xl border border-stone-200 p-6 shadow-soft space-y-5 text-center flex flex-col items-center">
-        
-        <!-- User Avatar Header -->
         <div class="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-300 text-amber-900 flex items-center justify-center shadow-xs mx-auto text-xl font-black">
           <i data-lucide="user" class="w-8 h-8 text-amber-700"></i>
         </div>
@@ -550,7 +546,6 @@
           <p class="text-xs text-stone-500">Your profile &amp; device synchronization status</p>
         </div>
 
-        <!-- Dynamic User Information Card -->
         <div class="w-full bg-stone-50 border border-stone-200 rounded-2xl p-4 text-left space-y-3 shadow-xs">
           <div>
             <span class="text-[10px] uppercase font-black text-stone-400 tracking-wider block">Registered Email</span>
@@ -577,7 +572,6 @@
           </div>
         </div>
 
-        <!-- Account Actions -->
         <div class="w-full border-t border-stone-100 pt-3 space-y-2 text-center">
           <button onclick="handleSignOut()" class="w-full py-3 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-soft transition-colors cursor-pointer">
             Sign Out
@@ -711,7 +705,7 @@
     </div>
   </div>
 
-  <!-- ================= GENERIC CONFIRM / PROMPT DIALOG MODAL ================= -->
+  <!-- ================= CONFIRM / PROMPT DIALOG MODAL ================= -->
   <div id="app-dialog-modal" class="hidden fixed inset-0 z-[85] bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-elevated border border-stone-200 space-y-3.5 text-center">
       <h3 id="dialog-title" class="text-lg font-black text-stone-900">Confirm</h3>
