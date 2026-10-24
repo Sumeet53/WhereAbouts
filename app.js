@@ -33,7 +33,7 @@ let currentUser = null;
 let isGuestSession = false;
 let firestoreUnsubscribe = null;
 let suppressAuthGatewayTransition = false;
-let isSyncingFromCloud = false; // Prevents recursive loop
+let isSyncingFromCloud = false;
 let activeSpeechRecognizer = null;
 
 // Auth State Watcher
@@ -48,6 +48,7 @@ if (auth) {
       hideAuthGateway();
       attachRealtimeSync(user.uid);
       updateAuthUI();
+      resetAllFiltersSilently();
       switchPage('home');
     } else {
       if (firestoreUnsubscribe) {
@@ -60,6 +61,8 @@ if (auth) {
         isGuestSession = true;
         hideAuthGateway();
         updateAuthUI();
+        resetAllFiltersSilently();
+        switchPage('home');
       } else {
         showAuthGateway();
       }
@@ -98,6 +101,7 @@ window.continueAsGuest = function () {
   localStorage.setItem('whereabouts_guest_session', 'true');
   hideAuthGateway();
   updateAuthUI();
+  resetAllFiltersSilently();
   switchPage('home');
   showToast('Continuing in offline local mode.');
 };
@@ -251,7 +255,6 @@ function attachRealtimeSync(uid) {
       const cloudItems = data.items;
       const cloudRooms = data.rooms;
 
-      // Deep compare stringified data to avoid re-rendering identical states
       const localItemsStr = JSON.stringify(state.items);
       const incomingItemsStr = JSON.stringify(cloudItems || []);
 
@@ -517,6 +520,7 @@ const CATEGORY_THEMES = {
   'Other': { themeClass: 'cat-theme-other', bg: 'bg-stone-100', border: 'border-stone-300', badge: 'bg-stone-200 text-stone-900 border-stone-400', innerBox: 'bg-white/85 border-stone-200', icon: 'package' },
 };
 
+// DEFAULT STATE: ALL FILTERS CLEAN AND SET TO "ALL"
 const state = {
   items: [],
   rooms: [],
@@ -711,8 +715,30 @@ function getVerificationConfidence(item) {
 }
 
 // -------------------------------------------------------------------------
-// ROCK-SOLID SEARCH & STABLE SORTING (NO JUMPING OR FLICKERING)
+// FILTERS: ALWAYS DEFAULT TO "ALL"
 // -------------------------------------------------------------------------
+
+function resetAllFiltersSilently() {
+  state.selectedCategory = 'All';
+  state.selectedRoom = 'All';
+  state.filterLentOnly = false;
+  state.filterLowStockOnly = false;
+  state.filterMissingOnly = false;
+  state.searchQuery = '';
+  state.sortBy = 'recent';
+
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) searchInput.value = '';
+
+  const typeSelect = document.getElementById('filter-type-select');
+  if (typeSelect) typeSelect.value = 'All';
+
+  const locSelect = document.getElementById('filter-location-select');
+  if (locSelect) locSelect.value = 'All';
+
+  const sortSelect = document.getElementById('sort-order-select');
+  if (sortSelect) sortSelect.value = 'recent';
+}
 
 function getFilteredItems() {
   const query = state.searchQuery.trim().toLowerCase();
@@ -740,7 +766,6 @@ function getFilteredItems() {
     });
   }
 
-  // Stable timestamp parser helper that guarantees no NaN comparisons
   const safeTime = (item) => {
     const raw = item.createdAt || item.lastVerifiedAt;
     if (!raw) return 0;
@@ -764,11 +789,10 @@ function getFilteredItems() {
       break;
     case 'recent':
     default:
-      // Guaranteed deterministic reverse-chronological order (newest first)
       results.sort((a, b) => {
         const diff = safeTime(b) - safeTime(a);
         if (diff !== 0) return diff;
-        return (b.id || '').localeCompare(a.id || ''); // Secondary tie-breaker prevents jitter
+        return (b.id || '').localeCompare(a.id || '');
       });
       break;
   }
@@ -896,7 +920,7 @@ function renderSortFilterCard() {
 }
 
 // -------------------------------------------------------------------------
-// STABLE VERIFIED CLARITY METRIC (DOES NOT FLUCTUATE)
+// CLARITY CALCULATION
 // -------------------------------------------------------------------------
 
 function renderEngagementStatus() {
@@ -910,7 +934,6 @@ function renderEngagementStatus() {
   const streak = state.engagement.streak || 1;
   if (streakBadge) streakBadge.textContent = `${streak}-Day Organizing Streak`;
 
-  // Absolute clarity calculation based purely on live data
   const total = state.items.length;
   const verified = state.items.filter((item) => !item.isMissing && Boolean(item.lastVerifiedAt)).length;
   const clarity = total > 0 ? Math.round((verified / total) * 100) : 100;
@@ -1066,14 +1089,7 @@ window.toggleMissingFilter = function () {
 };
 
 window.resetAllFilters = function () {
-  state.selectedCategory = 'All';
-  state.selectedRoom = 'All';
-  state.filterLentOnly = false;
-  state.filterLowStockOnly = false;
-  state.filterMissingOnly = false;
-  state.searchQuery = '';
-  const searchInput = document.getElementById('search-input');
-  if (searchInput) searchInput.value = '';
+  resetAllFiltersSilently();
   renderApp();
   showToast('Filters reset • Showing all items');
 };
@@ -1268,11 +1284,17 @@ window.switchPage = function (pageId) {
     }
   });
 
-  if (pageId === 'home') renderApp();
-  else if (pageId === 'add') initAddView();
-  else if (pageId === 'streak') renderEngagementStatus();
-  else if (pageId === 'spotcheck') initSpotCheckPage();
-  else if (pageId === 'about') updateAuthUI();
+  if (pageId === 'home') {
+    renderApp();
+  } else if (pageId === 'add') {
+    initAddView();
+  } else if (pageId === 'streak') {
+    renderEngagementStatus();
+  } else if (pageId === 'spotcheck') {
+    initSpotCheckPage();
+  } else if (pageId === 'about') {
+    updateAuthUI();
+  }
 
   window.scrollTo(0, 0);
   safeCreateIcons();
@@ -1358,7 +1380,7 @@ function renderItemCardHtml(item) {
           ${
             !item.isMissing
               ? `<span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full border shadow-xs ${confidence.badgeClass}">
-                  <i data-lucide="${confidence.icon}" class="w-3 h-3 shrink-0"></i>
+                  <i data-lucide="${confidence.icon}" class="w-3.5 h-3.5"></i>
                   <span>${confidence.shortLabel}</span>
                 </span>`
               : ''
@@ -1611,7 +1633,7 @@ window.deleteItem = function (id) {
 };
 
 // -------------------------------------------------------------------------
-// CLEAN SINGLE-INSTANCE VOICE RECOGNITION (NO DOUBLE WORDS)
+// VOICE RECOGNITION (CLEAN SINGLE-PHRASE CAPTURE)
 // -------------------------------------------------------------------------
 
 window.handleSimpleVoiceInput = function (text) {
@@ -1640,7 +1662,6 @@ window.toggleVoiceRecognition = function () {
   const vInput = document.getElementById('voice-nlp-input');
   const nameInput = document.getElementById('add-item-name');
 
-  // Hard cancel previous instance
   if (activeSpeechRecognizer) {
     try {
       activeSpeechRecognizer.abort();
@@ -1663,7 +1684,7 @@ window.toggleVoiceRecognition = function () {
     if (!event.results || !event.results[0] || !event.results[0][0]) return;
     let spokenText = event.results[0][0].transcript.trim();
 
-    // Auto-remove repeated consecutive syllables/words (e.g. "car car car" -> "car")
+    // Remove repeated duplicate consecutive words
     spokenText = spokenText.replace(/\b(\w+)(?:\s+\1\b)+/gi, '$1');
 
     if (spokenText) {
@@ -1693,18 +1714,20 @@ window.toggleVoiceRecognition = function () {
 };
 
 // -------------------------------------------------------------------------
-// ADD / EDIT FORM
+// ADD / EDIT FORM (CLEARS EVERY FIELD TO BLANK ON FRESH LAUNCH)
 // -------------------------------------------------------------------------
 
 window.openQuickAddModal = function () {
   state.editingItemId = null;
   state.isSpotCheckEditing = false;
+  clearAllAddFormInputs();
   switchPage('add');
 };
 
 window.openQuickAddModalWithRoom = function (roomName) {
   state.editingItemId = null;
   state.isSpotCheckEditing = false;
+  clearAllAddFormInputs();
   switchPage('add');
   setTimeout(() => {
     const roomSelect = document.getElementById('add-item-room');
@@ -1712,14 +1735,61 @@ window.openQuickAddModalWithRoom = function (roomName) {
   }, 100);
 };
 
+function clearAllAddFormInputs() {
+  const form = document.getElementById('full-add-form');
+  if (form) form.reset();
+
+  const vInput = document.getElementById('voice-nlp-input');
+  if (vInput) vInput.value = '';
+
+  const nameInput = document.getElementById('add-item-name');
+  if (nameInput) nameInput.value = '';
+
+  const spotInput = document.getElementById('add-item-location-desc');
+  if (spotInput) spotInput.value = '';
+
+  const descInput = document.getElementById('add-item-desc');
+  if (descInput) descInput.value = '';
+
+  const tagsInput = document.getElementById('add-item-tags');
+  if (tagsInput) tagsInput.value = '';
+
+  const clearBtn = document.getElementById('btn-voice-input-clear');
+  if (clearBtn) clearBtn.style.display = 'none';
+
+  clearPhotoPreview();
+
+  const consToggle = document.getElementById('add-item-consumable-toggle');
+  if (consToggle) consToggle.checked = false;
+  const consFields = document.getElementById('consumable-fields');
+  if (consFields) consFields.style.display = 'none';
+
+  const lentToggle = document.getElementById('add-item-lent-toggle');
+  if (lentToggle) lentToggle.checked = false;
+  const lentFields = document.getElementById('lent-fields');
+  if (lentFields) lentFields.style.display = 'none';
+}
+
+function clearPhotoPreview() {
+  const previewContainer = document.getElementById('photo-preview-container');
+  if (previewContainer) previewContainer.classList.add('hidden');
+  const previewImg = document.getElementById('photo-preview-img');
+  if (previewImg) previewImg.src = '';
+  const fileInput = document.getElementById('photo-file-input');
+  if (fileInput) fileInput.value = '';
+}
+
 function initAddView() {
+  if (!state.editingItemId) {
+    clearAllAddFormInputs();
+  }
   populateDetailedAddForm(state.editingItemId ? state.items.find((i) => i.id === state.editingItemId) : null);
 }
 
 function populateDetailedAddForm(editingItem) {
   const catSelect = document.getElementById('add-item-category');
   const roomSelect = document.getElementById('add-item-room');
-  const form = document.getElementById('full-add-form');
+  const addTitle = document.getElementById('add-view-title');
 
   if (catSelect) {
     catSelect.innerHTML = CATEGORIES.filter((c) => c !== 'All')
@@ -1734,6 +1804,7 @@ function populateDetailedAddForm(editingItem) {
   }
 
   if (editingItem) {
+    if (addTitle) addTitle.textContent = `Edit "${editingItem.name}"`;
     document.getElementById('add-item-name').value = editingItem.name;
     document.getElementById('add-item-category').value = editingItem.category;
     document.getElementById('add-item-room').value = editingItem.location.room;
@@ -1741,7 +1812,7 @@ function populateDetailedAddForm(editingItem) {
     document.getElementById('add-item-desc').value = editingItem.description || '';
     document.getElementById('add-item-tags').value = (editingItem.tags || []).join(', ');
   } else {
-    if (form) form.reset();
+    if (addTitle) addTitle.textContent = 'Add Item';
   }
 }
 
@@ -1794,6 +1865,9 @@ window.handleSaveItemSubmit = function (e) {
   saveItems();
   handleDailyCheckIn();
 
+  // Reset form and voice inputs so next entry is completely blank
+  clearAllAddFormInputs();
+
   if (state.isSpotCheckEditing) {
     state.isSpotCheckEditing = false;
     state.spotCheckCurrentIndex++;
@@ -1804,6 +1878,7 @@ window.handleSaveItemSubmit = function (e) {
 };
 
 window.discardDetailedFormEntry = function () {
+  clearAllAddFormInputs();
   if (state.isSpotCheckEditing) {
     state.isSpotCheckEditing = false;
     switchPage('spotcheck');
@@ -1916,6 +1991,7 @@ window.resetData = function () {
       saveItems();
       saveRooms();
       saveEngagement();
+      resetAllFiltersSilently();
       renderApp();
       showToast('Reset to starter items');
     },
@@ -1951,6 +2027,9 @@ if ('serviceWorker' in navigator) {
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
 
+  // Reset filters to "All" every time the app is launched or opened
+  resetAllFiltersSilently();
+
   const searchInput = document.getElementById('search-input');
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
@@ -1958,6 +2037,19 @@ document.addEventListener('DOMContentLoaded', () => {
       renderApp();
     });
   }
+
+  document.addEventListener(
+    'touchend',
+    (e) => {
+      const btn = e.target.closest('button, [role="button"], .nav-tab-btn, label[for]');
+      if (!btn) return;
+      btn.style.opacity = '0.75';
+      setTimeout(() => {
+        btn.style.opacity = '';
+      }, 120);
+    },
+    { passive: true }
+  );
 
   setTimeout(runPeriodicNotificationCheck, 4000);
   switchPage('home');
